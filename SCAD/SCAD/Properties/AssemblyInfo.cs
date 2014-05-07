@@ -6,12 +6,12 @@ using System.Security;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("SCAD")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("SCAD Tools")]
+[assembly: AssemblyDescription("Wood Structural Construction Analysis and Design Toolset for SCA Consulting Engineers.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("SCA Consulting Engineers - Houston, TX")]
 [assembly: AssemblyProduct("SCAD")]
-[assembly: AssemblyCopyright("Copyright ©  2014")]
+[assembly: AssemblyCopyright("Copyright © SCA Consulting Engineers 2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

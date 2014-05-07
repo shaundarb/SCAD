@@ -13,7 +13,7 @@ namespace SCAD
     {
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
-            Excel.Workbook testWorkbook = this.Application.Workbooks.Add(System.Type.Missing);
+
         }
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
