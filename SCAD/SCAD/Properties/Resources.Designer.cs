@@ -63,9 +63,19 @@ namespace SCAD.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap SCAbutton {
+        internal static System.Drawing.Bitmap SCAbuttonLat {
             get {
-                object obj = ResourceManager.GetObject("SCAbutton", resourceCulture);
+                object obj = ResourceManager.GetObject("SCAbuttonLat", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap scabuttonstud1 {
+            get {
+                object obj = ResourceManager.GetObject("scabuttonstud1", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
