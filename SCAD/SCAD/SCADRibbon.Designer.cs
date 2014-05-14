@@ -80,8 +80,8 @@
             // 
             this.groupStuds.Items.Add(this.LaunchStuds);
             this.groupStuds.Items.Add(this.RelaunchStud);
-            this.groupStuds.Items.Add(this.StartDynamicSchedule);
             this.groupStuds.Items.Add(this.SetStudCallout);
+            this.groupStuds.Items.Add(this.StartDynamicSchedule);
             this.groupStuds.Items.Add(this.FinalizeSchedule);
             this.groupStuds.Items.Add(this.CreateScriptStud);
             this.groupStuds.Items.Add(this.PrintStudLines);

@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
+using Excel = Microsoft.Office.Interop.Excel;
+using Office = Microsoft.Office.Core;
+using Microsoft.Office.Tools.Excel;
 using System.Windows.Forms;
 
 namespace SCAD
@@ -11,7 +15,7 @@ namespace SCAD
     {
         private void SCADRibbon_Load(object sender, RibbonUIEventArgs e)
         {
-
+            
         }
 
         private void LaunchStuds_Click(object sender, RibbonControlEventArgs e)
@@ -26,7 +30,7 @@ namespace SCAD
 
         private void RelaunchStud_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will relaunch Stud Design if already in the Stud Design workbook eventually");
+            MessageBox.Show("This will relaunch Stud Design eventually");
         }
 
         private void FinalizeSchedule_Click(object sender, RibbonControlEventArgs e)
@@ -81,47 +85,56 @@ namespace SCAD
 
         private void OpenChecklistSpecs_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open Checklist and Specs eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook Specs = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\Specifications\Checklist & Specs_BETA.xlsm");
         }
 
         private void OpenBeam_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open the Beam worksheet eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook Beam = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\Beam\Beam Analysis v1.7.xlsm");
         }
 
         private void OpenColumn_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open the Column worksheet eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook Column = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\Studs\2005 NDS Column Interaction.xlsm");
         }
 
         private void OpenStud_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open the Stud worksheet eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook Stud = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\SCAD Programs\Stud Program\Stud Templates\Stud_Design.xltm");
         }
 
         private void OpenWind_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open the Wind worksheet eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook Wind = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\XXXXX New Wood Project Folder\3a Wind Loads\Wind Spreadsheetv3.0.xlsm");
         }
 
         private void OpenSeismic_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open the Seismic worksheet eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook Seismic = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\XXXXX New Wood Project Folder\3b Seismic Loads\IBC 2006 Seismic.xlsm");
         }
 
         private void OpenSeismic2_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open the Seismic2 worksheet eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook Seismic2 = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\XXXXX New Wood Project Folder\3b Seismic Loads\IBC 2012 Seismic.xlsm");
         }
 
         private void OpenWoodBrickDiff_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open the Wood/Brick Differential worksheet eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook BrickDiff = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\XXXXX New Wood Project Folder\7c Brick-Wood Differential\Shrinkagev1.0.xlsm");
         }
 
         private void OpenPeriod_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will open the Building Period worksheet eventually");
+            Excel.Application xlApp = (Excel.Application)Globals.SCADMain.Application;
+            Excel.Workbook Period = xlApp.Workbooks.Open(@"\\Fs1\ENGUSERS\DESIGN\Codes (Wind and Seismic)\Seismic\T calcs.xlsm");
         }
     }
 }
