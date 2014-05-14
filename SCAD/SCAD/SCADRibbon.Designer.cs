@@ -39,8 +39,8 @@
             this.groupStuds = this.Factory.CreateRibbonGroup();
             this.LaunchStuds = this.Factory.CreateRibbonButton();
             this.RelaunchStud = this.Factory.CreateRibbonButton();
-            this.StartDynamicSchedule = this.Factory.CreateRibbonButton();
             this.SetStudCallout = this.Factory.CreateRibbonButton();
+            this.StartDynamicSchedule = this.Factory.CreateRibbonButton();
             this.FinalizeSchedule = this.Factory.CreateRibbonButton();
             this.CreateScriptStud = this.Factory.CreateRibbonButton();
             this.PrintStudLines = this.Factory.CreateRibbonButton();
@@ -113,18 +113,6 @@
     "sign workbook)";
             this.RelaunchStud.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.RelaunchStud_Click);
             // 
-            // StartDynamicSchedule
-            // 
-            this.StartDynamicSchedule.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.StartDynamicSchedule.Label = "Start Dynamic Schedule";
-            this.StartDynamicSchedule.Name = "StartDynamicSchedule";
-            this.StartDynamicSchedule.OfficeImageId = "OutlineGroup";
-            this.StartDynamicSchedule.ScreenTip = "Start Dynamic Schedule";
-            this.StartDynamicSchedule.ShowImage = true;
-            this.StartDynamicSchedule.SuperTip = "Begins generating a projet stud schedule.  The designer will then consolidate the" +
-    "m into the final schedule.";
-            this.StartDynamicSchedule.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.StartDynamicSchedule_Click);
-            // 
             // SetStudCallout
             // 
             this.SetStudCallout.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
@@ -136,6 +124,18 @@
             this.SetStudCallout.SuperTip = "Recalculates stud wall data with new user-defined callout for individual walls (o" +
     "n \"Ln Calc Table\" worksheets)";
             this.SetStudCallout.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.SetStudCallout_Click);
+            // 
+            // StartDynamicSchedule
+            // 
+            this.StartDynamicSchedule.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.StartDynamicSchedule.Label = "Start Dynamic Schedule";
+            this.StartDynamicSchedule.Name = "StartDynamicSchedule";
+            this.StartDynamicSchedule.OfficeImageId = "OutlineGroup";
+            this.StartDynamicSchedule.ScreenTip = "Start Dynamic Schedule";
+            this.StartDynamicSchedule.ShowImage = true;
+            this.StartDynamicSchedule.SuperTip = "Begins generating a projet stud schedule.  The designer will then consolidate the" +
+    "m into the final schedule.";
+            this.StartDynamicSchedule.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.StartDynamicSchedule_Click);
             // 
             // FinalizeSchedule
             // 

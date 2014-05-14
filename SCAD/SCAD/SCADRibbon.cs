@@ -5,8 +5,6 @@ using System.Text;
 using System.Xml.Linq;
 using Microsoft.Office.Tools.Ribbon;
 using Excel = Microsoft.Office.Interop.Excel;
-using Office = Microsoft.Office.Core;
-using Microsoft.Office.Tools.Excel;
 using System.Windows.Forms;
 
 namespace SCAD
@@ -15,12 +13,13 @@ namespace SCAD
     {
         private void SCADRibbon_Load(object sender, RibbonUIEventArgs e)
         {
-            
+
         }
 
         private void LaunchStuds_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will launch Stud Design eventually");
+            string Response = Globals.SCADMain.StudDesign();
+            MessageBox.Show(Response);
         }
 
         private void SetStudCallout_Click(object sender, RibbonControlEventArgs e)
@@ -55,7 +54,8 @@ namespace SCAD
 
         private void PrelimLateral_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will begin Preliminary Lateral Design eventually");
+            string Response = Globals.SCADMain.LateralDesign();
+            MessageBox.Show(Response);
         }
 
         private void FullLateral_Click(object sender, RibbonControlEventArgs e)

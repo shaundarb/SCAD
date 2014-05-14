@@ -21,8 +21,27 @@ namespace SCAD
             // Writes to activesheet to verify permissions.
             Excel.Worksheet activeSheet = Application.ActiveSheet;
             Excel.Range FirstRow = activeSheet.get_Range("A1");
-            FirstRow.Value2 = "SCAD things.";
+            FirstRow.Value2 = "Testing SCAD things.";
+        }
 
+        public string StudDesign()
+        {
+            // Testing interaction between SCADMain and SCADRibbon buttons.
+            MessageBox.Show("This is in SCADMain.");
+            Excel.Worksheet activeSheet = Application.ActiveSheet;
+            Excel.Range FirstRow = activeSheet.get_Range("A1");
+            FirstRow.Value2 = "Stud stuff has been done to this now.";
+            return "Now back to SCADRibbon.";
+        }
+
+        public string LateralDesign()
+        {
+            // Testing interaction between SCADMain and SCADRibbon buttons.
+            MessageBox.Show("This is in SCADMain.");
+            Excel.Worksheet activeSheet = Application.ActiveSheet;
+            Excel.Range FirstRow = activeSheet.get_Range("A1");
+            FirstRow.Value2 = "Lateral stuff has been done to this now.";
+            return "Now back to SCADRibbon.";
         }
 
         private void SCADMain_Shutdown(object sender, System.EventArgs e)
