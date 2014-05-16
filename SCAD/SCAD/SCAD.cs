@@ -31,6 +31,11 @@ namespace SCAD
             Excel.Worksheet activeSheet = Application.ActiveSheet;
             Excel.Range FirstRow = activeSheet.get_Range("A1");
             FirstRow.Value2 = "Stud stuff has been done to this now.";
+
+            // Testing launching and return of StudLaunch Form
+            SCAD.StudLaunch StudForm = new SCAD.StudLaunch();
+            StudForm.Show();
+
             return "Now back to SCADRibbon.";
         }
 

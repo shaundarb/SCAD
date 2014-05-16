@@ -180,9 +180,18 @@
     can be found.
   -->
   <ItemGroup>
+    <Compile Include="StudLaunch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="StudLaunch.Designer.cs">
+      <DependentUpon>StudLaunch.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="StudLaunch.resx">
+      <DependentUpon>StudLaunch.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
@@ -192,7 +201,6 @@
       <DependentUpon>SCADRibbon.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="ClassDiagram1.cd" />
-    <None Include="ClassDiagram2.cd" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -229,6 +237,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\scabuttonstud.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\SCALogo1.png" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
