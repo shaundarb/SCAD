@@ -21,5 +21,15 @@ namespace SCAD
         {
 
         }
+
+        private void CancelStud_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void SubmitStud_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
     }
 }

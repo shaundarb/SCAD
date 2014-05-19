@@ -13,7 +13,7 @@ namespace SCAD
     {
         private void SCADRibbon_Load(object sender, RibbonUIEventArgs e)
         {
-
+            this.TabSCAD.Position = this.Factory.RibbonPosition.BeforeOfficeId("TabHome");
         }
 
         private void LaunchStuds_Click(object sender, RibbonControlEventArgs e)
@@ -22,7 +22,10 @@ namespace SCAD
              * returns a string to ensure it has been called successfully
              * and then displays it.*/
             string Response = Globals.SCADMain.StudDesign();
-            MessageBox.Show(Response);
+            if (Response != null)
+            {
+                MessageBox.Show(Response);
+            }
         }
 
         private void SetStudCallout_Click(object sender, RibbonControlEventArgs e)
@@ -47,7 +50,14 @@ namespace SCAD
 
         private void CreateScriptStud_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will Create the Stud Script File eventually");
+            /* Calls the StudExport() function from SCADMain. This function 
+             * returns a string to ensure it has been called successfully
+             * and then displays it.*/
+            string Response = Globals.SCADMain.StudExport();
+            if (Response != null)
+            {
+                MessageBox.Show(Response);
+            }
         }
 
         private void PrintStudLines_Click(object sender, RibbonControlEventArgs e)
@@ -61,7 +71,10 @@ namespace SCAD
              * returns a string to ensure it has been called successfully
              * and then displays it.*/
             string Response = Globals.SCADMain.LateralDesign();
-            MessageBox.Show(Response);
+            if (Response != null)
+            {
+                MessageBox.Show(Response);
+            }
         }
 
         private void FullLateral_Click(object sender, RibbonControlEventArgs e)

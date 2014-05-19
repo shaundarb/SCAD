@@ -180,6 +180,12 @@
     can be found.
   -->
   <ItemGroup>
+    <Compile Include="StudExport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="StudExport.Designer.cs">
+      <DependentUpon>StudExport.cs</DependentUpon>
+    </Compile>
     <Compile Include="StudLaunch.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -189,6 +195,9 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="StudExport.resx">
+      <DependentUpon>StudExport.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="StudLaunch.resx">
       <DependentUpon>StudLaunch.cs</DependentUpon>
     </EmbeddedResource>
@@ -200,7 +209,6 @@
     <EmbeddedResource Include="SCADRibbon.resx">
       <DependentUpon>SCADRibbon.cs</DependentUpon>
     </EmbeddedResource>
-    <None Include="ClassDiagram1.cd" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
