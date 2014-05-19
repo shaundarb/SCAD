@@ -37,15 +37,12 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SCADRibbon));
             this.TabSCAD = this.Factory.CreateRibbonTab();
             this.groupStuds = this.Factory.CreateRibbonGroup();
-            this.LaunchStuds = this.Factory.CreateRibbonButton();
             this.RelaunchStud = this.Factory.CreateRibbonButton();
             this.SetStudCallout = this.Factory.CreateRibbonButton();
             this.StartDynamicSchedule = this.Factory.CreateRibbonButton();
             this.FinalizeSchedule = this.Factory.CreateRibbonButton();
-            this.CreateScriptStud = this.Factory.CreateRibbonButton();
             this.PrintStudLines = this.Factory.CreateRibbonButton();
             this.LateralTools = this.Factory.CreateRibbonGroup();
-            this.PrelimLateral = this.Factory.CreateRibbonButton();
             this.FullLateral = this.Factory.CreateRibbonButton();
             this.SetupWalls = this.Factory.CreateRibbonButton();
             this.CreateScriptLateral = this.Factory.CreateRibbonButton();
@@ -61,6 +58,9 @@
             this.OpenSeismic2 = this.Factory.CreateRibbonButton();
             this.OpenWoodBrickDiff = this.Factory.CreateRibbonButton();
             this.OpenPeriod = this.Factory.CreateRibbonButton();
+            this.LaunchStuds = this.Factory.CreateRibbonButton();
+            this.CreateScriptStud = this.Factory.CreateRibbonButton();
+            this.PrelimLateral = this.Factory.CreateRibbonButton();
             this.TabSCAD.SuspendLayout();
             this.groupStuds.SuspendLayout();
             this.LateralTools.SuspendLayout();
@@ -87,19 +87,6 @@
             this.groupStuds.Items.Add(this.PrintStudLines);
             this.groupStuds.Label = "Stud Tools";
             this.groupStuds.Name = "groupStuds";
-            // 
-            // LaunchStuds
-            // 
-            this.LaunchStuds.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.LaunchStuds.Image = ((System.Drawing.Image)(resources.GetObject("LaunchStuds.Image")));
-            this.LaunchStuds.Label = "Stud Design";
-            this.LaunchStuds.Name = "LaunchStuds";
-            this.LaunchStuds.ScreenTip = "Launch Stud Design";
-            this.LaunchStuds.ShowImage = true;
-            this.LaunchStuds.SuperTip = "Launches initial stud design process. Must be called from the raw CAD data Excel " +
-    "file generated from the project data (Data Required: Stud Walls, Load Lines, Gap" +
-    " Lines, Diaphragm Lines)";
-            this.LaunchStuds.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.LaunchStuds_Click);
             // 
             // RelaunchStud
             // 
@@ -150,19 +137,6 @@
     "";
             this.FinalizeSchedule.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.FinalizeSchedule_Click);
             // 
-            // CreateScriptStud
-            // 
-            this.CreateScriptStud.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.CreateScriptStud.Label = "Create Script File";
-            this.CreateScriptStud.Name = "CreateScriptStud";
-            this.CreateScriptStud.OfficeImageId = "ViewPageLayoutView";
-            this.CreateScriptStud.ScreenTip = "Create Stud CAD Script File";
-            this.CreateScriptStud.ShowImage = true;
-            this.CreateScriptStud.SuperTip = "Creates a CAD script file to copy the stud design data into the project drawing. " +
-    "Allows the designer to specify what data to copy over (callouts, wall name, key " +
-    "plan, schedule, endpoints, reactions)";
-            this.CreateScriptStud.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.CreateScriptStud_Click);
-            // 
             // PrintStudLines
             // 
             this.PrintStudLines.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
@@ -184,18 +158,6 @@
             this.LateralTools.Items.Add(this.ExportRISADiaphragm);
             this.LateralTools.Label = "Lateral Design Tools";
             this.LateralTools.Name = "LateralTools";
-            // 
-            // PrelimLateral
-            // 
-            this.PrelimLateral.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.PrelimLateral.Image = ((System.Drawing.Image)(resources.GetObject("PrelimLateral.Image")));
-            this.PrelimLateral.Label = "Prelim Lateral Design";
-            this.PrelimLateral.Name = "PrelimLateral";
-            this.PrelimLateral.ScreenTip = "Preliminary Lateral Design";
-            this.PrelimLateral.ShowImage = true;
-            this.PrelimLateral.SuperTip = "Begins Preliminary Lateral Design from Raw Shear CAD data set. Loads the lateral " +
-    "design workbook.";
-            this.PrelimLateral.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.PrelimLateral_Click);
             // 
             // FullLateral
             // 
@@ -224,9 +186,9 @@
             // CreateScriptLateral
             // 
             this.CreateScriptLateral.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.CreateScriptLateral.Image = global::SCAD.Properties.Resources.scriptButton;
             this.CreateScriptLateral.Label = "Create Script File";
             this.CreateScriptLateral.Name = "CreateScriptLateral";
-            this.CreateScriptLateral.OfficeImageId = "ViewPageLayoutView";
             this.CreateScriptLateral.ScreenTip = "Create Script File";
             this.CreateScriptLateral.ShowImage = true;
             this.CreateScriptLateral.SuperTip = "Creates CAD Script file for Lateral Design Data which includes Shear Wall Names, " +
@@ -350,6 +312,44 @@
             this.OpenPeriod.ShowImage = true;
             this.OpenPeriod.SuperTip = "Opens Building Period workbook.";
             this.OpenPeriod.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.OpenPeriod_Click);
+            // 
+            // LaunchStuds
+            // 
+            this.LaunchStuds.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.LaunchStuds.Image = ((System.Drawing.Image)(resources.GetObject("LaunchStuds.Image")));
+            this.LaunchStuds.Label = "Stud Design";
+            this.LaunchStuds.Name = "LaunchStuds";
+            this.LaunchStuds.ScreenTip = "Launch Stud Design";
+            this.LaunchStuds.ShowImage = true;
+            this.LaunchStuds.SuperTip = "Launches initial stud design process. Must be called from the raw CAD data Excel " +
+    "file generated from the project data (Data Required: Stud Walls, Load Lines, Gap" +
+    " Lines, Diaphragm Lines)";
+            this.LaunchStuds.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.LaunchStuds_Click);
+            // 
+            // CreateScriptStud
+            // 
+            this.CreateScriptStud.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.CreateScriptStud.Image = global::SCAD.Properties.Resources.scriptButton;
+            this.CreateScriptStud.Label = "Create Script File";
+            this.CreateScriptStud.Name = "CreateScriptStud";
+            this.CreateScriptStud.ScreenTip = "Create Stud CAD Script File";
+            this.CreateScriptStud.ShowImage = true;
+            this.CreateScriptStud.SuperTip = "Creates a CAD script file to copy the stud design data into the project drawing. " +
+    "Allows the designer to specify what data to copy over (callouts, wall name, key " +
+    "plan, schedule, endpoints, reactions)";
+            this.CreateScriptStud.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.CreateScriptStud_Click);
+            // 
+            // PrelimLateral
+            // 
+            this.PrelimLateral.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.PrelimLateral.Image = ((System.Drawing.Image)(resources.GetObject("PrelimLateral.Image")));
+            this.PrelimLateral.Label = "Prelim Lateral Design";
+            this.PrelimLateral.Name = "PrelimLateral";
+            this.PrelimLateral.ScreenTip = "Preliminary Lateral Design";
+            this.PrelimLateral.ShowImage = true;
+            this.PrelimLateral.SuperTip = "Begins Preliminary Lateral Design from Raw Shear CAD data set. Loads the lateral " +
+    "design workbook.";
+            this.PrelimLateral.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.PrelimLateral_Click);
             // 
             // SCADRibbon
             // 

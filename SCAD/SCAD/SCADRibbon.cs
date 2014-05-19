@@ -68,8 +68,7 @@ namespace SCAD
         private void PrelimLateral_Click(object sender, RibbonControlEventArgs e)
         {
             /* Calls the LateralDesign() function from SCADMain. This function 
-             * returns a string to ensure it has been called successfully
-             * and then displays it.*/
+             * returns a string if something unexpected is encountered.*/
             string Response = Globals.SCADMain.LateralDesign();
             if (Response != null)
             {
@@ -89,7 +88,13 @@ namespace SCAD
 
         private void CreateScriptLateral_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will create the lateral design script eventually");
+            /* Calls the LateralExport() function from SCADMain. This function 
+             * returns a string if something unexpected is encountered.*/
+            string Response = Globals.SCADMain.LateralExport();
+            if (Response != null)
+            {
+                MessageBox.Show(Response);
+            }
         }
 
         private void PrintReportsLateral_Click(object sender, RibbonControlEventArgs e)

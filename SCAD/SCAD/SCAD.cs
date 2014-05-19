@@ -59,9 +59,9 @@ namespace SCAD
             FirstRow.Value2 = "Testing SCAD things.";
         }
 
-        /***************** Stud Design methods ****************/
+        /******************** STUD DESIGN methods *******************/
 
-        // StudDesign() -- "Stud Design" on SCAD Ribbon
+        // StudDesign() -- Begins initial Stud Design from Data.
         public string StudDesign()
         {
             /* StudDesign() -- called by clicking "Launch SCAD" button on SCAD Ribbon
@@ -81,7 +81,7 @@ namespace SCAD
             return "Now back to SCADRibbon.";
         }
 
-        // StudExport() - "Create Stud Script" on SCAD Ribbon.
+        // StudExport() -- Creates an AutoCAD script file of Stud Design.
         public string StudExport()
         {
             /* StudExport() -- called by clicking "Create Script" on SCAD Ribbon.
@@ -180,9 +180,11 @@ namespace SCAD
             return null;
         }
 
-        /***************** End Stud Design methods ****************/
+        /***************** End STUD DESIGN methods ******************/
 
-        /***************** Lateral Design methods ****************/
+        /***************** LATERAL DESIGN methods *******************/
+
+        // LateralDesign() -- Begins Prelim Lateral Design from Data.
         public string LateralDesign()
         {
             // Testing interaction between SCADMain and SCADRibbon buttons.
@@ -193,7 +195,80 @@ namespace SCAD
             return "Now back to SCADRibbon.";
         }
 
-        /***************** End Lateral Design methods ****************/
+        // LateralExport() -- Creates AutoCAD script file of Lateral Design.
+        public string LateralExport()
+        {
+            /* LateralExport() -- called by clicking "Create Script" on SCAD Ribbon in Lateral 
+             * tools. Passes desired script options from form and then copies existing script
+             * data on Lateral Design workbook into a AutoCAD script file (*.scr) in Notepad.*/
+
+            // Create instance of LateralExport form in Modal mode.
+            SCAD.LateralExport LateralExportForm = new SCAD.LateralExport();
+            LateralExportForm.ShowDialog();
+
+            // If Cancel is clicked, so prompt isn't displayed.
+            if (LateralExportForm.LateralExportOptions[6] == true)
+            {
+                return null;
+            }
+
+            // Check to see if in Lateral Design workbook
+            {
+                bool found = false;
+                foreach (Excel.Worksheet sheet in this.Application.Sheets)
+                {
+                    if (sheet.Name == "Iteration")
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    return "This routine may only be called from the Lateral Design workbook after preliminary SCAD stud design has been completed.";
+                }
+            }
+
+            // Select 'Script File' worksheet and assign bool values from Form to determine what to include in Script
+            Excel.Worksheet wsScriptFile = Application.Worksheets.get_Item("Script File");
+            wsScriptFile.Select();
+            {
+                wsScriptFile.get_Range("O1").Value2 = LateralExportForm.LateralExportOptions[0];  // Shear Wall Names
+                wsScriptFile.get_Range("F1").Value2 = LateralExportForm.LateralExportOptions[1];  // Shear Wall Design
+                wsScriptFile.get_Range("R1").Value2 = LateralExportForm.LateralExportOptions[2];  // Shear Wall Length
+                wsScriptFile.get_Range("I1").Value2 = LateralExportForm.LateralExportOptions[3];  // Shear Wall Anchors
+                wsScriptFile.get_Range("L1").Value2 = LateralExportForm.LateralExportOptions[4];  // Shear Wall Endpoints
+                wsScriptFile.get_Range("U1").Value2 = LateralExportForm.LateralExportOptions[5];  // Drag Forces
+
+                ((Excel._Worksheet)wsScriptFile).Calculate();
+            }
+
+            // Determines number of rows in master data list and copies it into Notepad as "Template.scr"
+            {
+                string maxLines = System.Convert.ToString(wsScriptFile.get_Range("A2").Value + 4);                  // Find Max range of Column B
+                Excel.Range ScriptRange = wsScriptFile.get_Range("B1", "B" + maxLines);
+                System.Array ScriptVals = (System.Array)ScriptRange.Value;                                          // Copy range and convert to string array
+                string[] ScriptText = ScriptVals.OfType<object>().Select(o => o.ToString()).ToArray();
+
+                string userName = Environment.UserName;                                                             // Determine user name to find directory
+                string fileName = "Template.scr";
+                int i = 1;
+
+                while (System.IO.File.Exists(@"C:\Users\" + userName + @"\Desktop\" + fileName))                    // Check to see if file exists. Increment if it does.  
+                {
+                    fileName = "Template" + i + ".scr";
+                    i++;
+                }
+
+                System.IO.File.WriteAllLines(@"C:\Users\" + userName + @"\Desktop\" + fileName, ScriptText);        // Create Script file on User's Desktop and display the file location.
+                MessageBox.Show("The AutoCAD Script file has been created and can be found on the Desktop at:\n"
+                    + @"C:\Users\" + userName + @"\Desktop\" + fileName);
+                System.Diagnostics.Process.Start("explorer.exe", @"/select, C:\Users\" + userName + @"\Desktop\" + fileName);
+            }
+
+            return null;
+        }
+        /***************** End LATERAL DESIGN methods ***************/
 
         /* Shutdown method for the SCAD Add-In */
         private void SCADMain_Shutdown(object sender, System.EventArgs e)

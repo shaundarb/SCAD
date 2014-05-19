@@ -180,6 +180,12 @@
     can be found.
   -->
   <ItemGroup>
+    <Compile Include="LateralExport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LateralExport.Designer.cs">
+      <DependentUpon>LateralExport.cs</DependentUpon>
+    </Compile>
     <Compile Include="StudExport.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -195,6 +201,9 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="LateralExport.resx">
+      <DependentUpon>LateralExport.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="StudExport.resx">
       <DependentUpon>StudExport.cs</DependentUpon>
     </EmbeddedResource>
@@ -248,6 +257,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\SCALogo1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\scriptButton.png" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
