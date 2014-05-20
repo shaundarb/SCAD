@@ -62,7 +62,14 @@ namespace SCAD
 
         private void PrintStudLines_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will create Stud PDF reports eventually");
+            /* Calls the StudPrintReports() function from SCADMain. This function 
+             * returns a string to ensure it has been called successfully
+             * and then displays it.*/
+            string Response = Globals.SCADMain.StudLineReports();
+            if (Response != null)
+            {
+                MessageBox.Show(Response);
+            }
         }
 
         private void PrelimLateral_Click(object sender, RibbonControlEventArgs e)

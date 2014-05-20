@@ -150,7 +150,6 @@ namespace SCAD
             }
 
             // Determines number of rows in master data list and copies it into Notepad as "Template.scr"
-            try
             {
                 string maxLines = System.Convert.ToString(CreateScript.get_Range("A2").Value + 5);                  // Find Max range of Column B
                 Excel.Range ScriptRange = CreateScript.get_Range("B1", "B" + maxLines);                            
@@ -172,12 +171,24 @@ namespace SCAD
                     + @"C:\Users\" + userName + @"\Desktop\" + fileName);
                 System.Diagnostics.Process.Start("explorer.exe", @"/select, C:\Users\" + userName + @"\Desktop\" + fileName);
             }
-            catch (Exception e)
-            {
-                MessageBox.Show(e.Message);
-            }
 
             return null;
+        }
+
+        public string StudLineReports()
+        {
+            SCAD.StudPrintLines StudReportForm = new SCAD.StudPrintLines();
+            StudReportForm.ShowDialog();
+
+            if (StudReportForm.PrintUnique == true)
+            {
+                MessageBox.Show("Print Unique Lines.");
+            }
+            else
+            {
+                MessageBox.Show("Print Selected Lines.");
+            }
+            return "Now back to SCAD Ribbon";
         }
 
         /***************** End STUD DESIGN methods ******************/

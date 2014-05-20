@@ -180,6 +180,12 @@
     can be found.
   -->
   <ItemGroup>
+    <Compile Include="StudPrintLines.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="StudPrintLines.Designer.cs">
+      <DependentUpon>StudPrintLines.cs</DependentUpon>
+    </Compile>
     <Compile Include="LateralExport.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -201,6 +207,9 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="StudPrintLines.resx">
+      <DependentUpon>StudPrintLines.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="LateralExport.resx">
       <DependentUpon>LateralExport.cs</DependentUpon>
     </EmbeddedResource>
