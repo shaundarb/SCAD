@@ -12,7 +12,8 @@ namespace SCAD
 {
     public partial class StudPrintLines : Form
     {
-        public bool PrintUnique = true;
+        public bool PrintUnique = false;
+        public bool PrintCurrent = false;
 
         public StudPrintLines()
         {
@@ -27,7 +28,7 @@ namespace SCAD
 
         private void buttonPrintCurrent_Click(object sender, EventArgs e)
         {
-            PrintUnique = false;
+            PrintCurrent = true;
             this.Close();
         }
 
