@@ -171,6 +171,7 @@ namespace SCAD
         // StudLineReports() -- Creates PDF reports of flagged stud lines.
         public string StudLineReports()
         {
+            // Call Stud Report Dialog
             SCAD.StudPrintLines StudReportForm = new SCAD.StudPrintLines();
             StudReportForm.ShowDialog();
 
@@ -207,10 +208,172 @@ namespace SCAD
 
             // Routine to make reports of all flagged lines.
             {
-                
+                // Declarations
+                Excel.Application xlApp = this.Application;
+                Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
+                string JobNumber = System.Convert.ToString(wsInput.get_Range("J4").Value);
+                int levels = (int)wsInput.get_Range("D7").Value;
+
+                // Deactivate Screen Updating while reports are made
+                xlApp.ScreenUpdating = false;
+
+                // Create Report Directories for job PDF files
+                this.MkReportDirs(JobNumber);
+
+                // Create PDF reports for each level according to the line's print flags
+                for (int i = 1; i <= levels; i++)
+                {
+                    this.StudLevelReports(i,JobNumber);
+                }
+
+                // Activate Screen Updating after reports are made
+                xlApp.ScreenUpdating = true;
             }
 
             return "Now back to SCAD Ribbon";
+        }
+
+        // MkReportDirs() -- Creates Unique Report Directories.
+        public void MkReportDirs(string JobNumber)
+        {
+            // Check if Report Directories exists and delete them
+            if (System.IO.Directory.Exists(@"C:\SCAD\Reports\" + JobNumber + @"\"))
+            {
+                System.IO.Directory.Delete(@"C:\SCAD\Reports\" + JobNumber + @"\", true);
+            }
+            if (System.IO.Directory.Exists(@"C:\SCAD\Reports\Temp\"))
+            {
+                System.IO.Directory.Delete(@"C:\SCAD\Reports\Temp\", true);
+            }
+
+            // Create new report directories, directory is "Temp" if no Job number exists
+            if (JobNumber == "")
+            {
+                System.IO.Directory.CreateDirectory(@"C:\SCAD\Reports\Temp\");
+            }
+            else
+            {
+                System.IO.Directory.CreateDirectory(@"C:\SCAD\Reports\" + JobNumber + @"\");
+            }
+
+            return;
+        }
+
+        // StudLevelReports() -- Creates the actual PDF reports for a given level
+        public void StudLevelReports(int level, string JobNumber)
+        {
+            try
+            {
+                // Worksheet Declarations
+                Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
+                Excel.Worksheet wsCalcTable = new Excel.Worksheet();
+                Excel.Worksheet wsStudAnalysis = Application.Worksheets.get_Item("STUD ANALYSIS");
+                foreach (Excel.Worksheet sheet in this.Application.Sheets)
+                {
+                    if (sheet.Name == "L" + level + " Calc Table")
+                    {
+                        wsCalcTable = sheet;
+                        break;
+                    }
+                }
+
+                // Value Declarations
+                int iStudn = (wsCalcTable.UsedRange.Rows.Count - 5);                                                    // Total Number of stud lines on Calc sheet
+                string PrintAll = System.Convert.ToString(wsCalcTable.get_Range("B4").Value2);                          // Holds Print All flag for level
+                string[] LineLabels = null;
+                if (wsCalcTable.get_Range("BS6").Value != null)                                                         // If Key Plan numbers exist, create label array
+                {
+                    System.Array LineVals = (System.Array)wsCalcTable.get_Range("BS6", "BS" + (6 + iStudn)).Value2;
+                    LineLabels = LineVals.OfType<object>().Select(o => o.ToString()).ToArray();
+                }
+                System.Object[,] StudLines = (System.Object[,])wsCalcTable.get_Range("A6", "AE" + (6 + iStudn)).Value2; // Holds stud line data for reports
+                
+                // Set Calculation to Manual while information is copied
+                Globals.SCADMain.Application.Calculation = Excel.XlCalculation.xlCalculationManual;
+
+                // Iterate through each stud line on Calc Table and create PDF report for it if flagged
+                for (int i = 1; i <= iStudn; i++)
+                {
+                    if (StudLines[i,1].ToString() == "Yes" || PrintAll == "Yes")
+                    {
+                        // Populate Stud Analysis worksheet with line information to create PDF
+                        {
+                            // Determine Interior/Exterior Flag
+                            if (StudLines[i, 3].ToString() == "I")
+                            {
+                                wsStudAnalysis.get_Range("C6").Value = "Interior";
+                            }
+                            else
+                            {
+                                wsStudAnalysis.get_Range("C6").Value = "Exterior";
+                            }
+
+                            wsStudAnalysis.get_Range("D6").Value = StudLines[i, 2].ToString();      // Wall Label
+                            wsStudAnalysis.get_Range("G6").Value = level;                           // Floor Level
+                            wsStudAnalysis.get_Range("J21").Value = StudLines[i, 15].ToString();    // Wall Height
+                            wsStudAnalysis.get_Range("D17").Value = StudLines[i, 16].ToString();    // Roof DL Reaction
+                            wsStudAnalysis.get_Range("E17").Value = StudLines[i, 17].ToString();    // Roof LL Reaction
+                            wsStudAnalysis.get_Range("F10").Value = StudLines[i, 10].ToString();    // Roof Length
+                            wsStudAnalysis.get_Range("D18").Value = StudLines[i, 18].ToString();    // Unit DL Reaction
+                            wsStudAnalysis.get_Range("E18").Value = StudLines[i, 19].ToString();    // Unit LL Reaction
+                            wsStudAnalysis.get_Range("F11").Value = StudLines[i, 11].ToString();    // Unit Length
+                            wsStudAnalysis.get_Range("D19").Value = StudLines[i, 20].ToString();    // Balcony DL Reaction
+                            wsStudAnalysis.get_Range("E19").Value = StudLines[i, 21].ToString();    // Balcony LL Reaction
+                            wsStudAnalysis.get_Range("F12").Value = StudLines[i, 12].ToString();    // Balcony Length
+                            wsStudAnalysis.get_Range("D20").Value = StudLines[i, 22].ToString();    // Corridor DL Reaction
+                            wsStudAnalysis.get_Range("E20").Value = StudLines[i, 23].ToString();    // Corridor LL Reaction
+                            wsStudAnalysis.get_Range("F13").Value = StudLines[i, 13].ToString();    // Corridor Length
+                            wsStudAnalysis.get_Range("D21").Value = StudLines[i, 24].ToString();    // Other DL Reaction
+                            wsStudAnalysis.get_Range("E21").Value = StudLines[i, 25].ToString();    // Other LL Reaction
+                            wsStudAnalysis.get_Range("F14").Value = StudLines[i, 14].ToString();    // Other Length
+                            wsStudAnalysis.get_Range("E28").Value = StudLines[i, 26].ToString();    // Unbraced Column Length Lx
+                            wsStudAnalysis.get_Range("E29").Value = StudLines[i, 27].ToString();    // Unbraced Column Length Ly
+                            wsStudAnalysis.get_Range("J11").Value = StudLines[i, 30].ToString();    // Stud Size
+                            wsStudAnalysis.get_Range("J12").Value = StudLines[i, 31].ToString();    // Stud Spacing
+                        }
+
+                        // Create PDF file of Stud Analysis Report for each line
+                        {
+                            // Label used for individual report file names
+                            string StudFileName = "Temp";
+                            if (String.IsNullOrEmpty(LineLabels[i]))
+                            {
+                                StudFileName = System.Convert.ToString(StudFileName + i);
+                            }
+                            else
+                            {
+                                StudFileName = LineLabels[i];
+                            }
+
+                            MessageBox.Show(StudFileName);
+
+                            if (JobNumber == "")                                // Place in Temp folder if no Job Number given
+                            {
+                                wsStudAnalysis.ExportAsFixedFormat(
+                                    Type: Excel.XlFixedFormatType.xlTypePDF, 
+                                    Filename: @"C:\SCAD\Reports\Temp\" + StudFileName + @".pdf", 
+                                    Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                                    IgnorePrintAreas:false,
+                                    OpenAfterPublish:false);
+                            }
+                            else
+                            {
+                                wsStudAnalysis.ExportAsFixedFormat(
+                                    Type: Excel.XlFixedFormatType.xlTypePDF, 
+                                    Filename: @"C:\SCAD\Reports\" + JobNumber + @"\" + StudFileName + @".pdf", 
+                                    Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                                    IgnorePrintAreas: false, 
+                                    OpenAfterPublish: false);
+                            }
+                        }
+                    }
+                }
+
+                // Return to Automatic Calculation after reports are made
+                Globals.SCADMain.Application.Calculation = Excel.XlCalculation.xlCalculationAutomatic;
+            }
+            catch (Exception e) { MessageBox.Show(e.Message); }
+            return;
         }
 
         // StudUniqueReports() -- Sets up workbook to make reports for all unique walls on each level.
@@ -230,11 +393,9 @@ namespace SCAD
             
             // Treatment of the workbook and formulas that accomodate all levels
             {
-                // Append Level to Job # so folder is not overwritten when reports are made
-                wsInput.get_Range("K4").Formula = @"=CONCATENATE(IFERROR(LEFT(J4,FIND(""-"",J4,1)-1),J4),""-1"")";
-                wsInput.get_Range("K4").Copy();
+                // Copy and Paste Job Number to remove formatting
+                wsInput.get_Range("J4").Copy();
                 wsInput.get_Range("J4").PasteSpecial(Excel.XlPasteType.xlPasteValues);
-                wsInput.get_Range("K4").ClearContents();
 
                 // Setting up Stud Analysis worksheet to include Key Plan # in reporting documents
                 wsAnalysis.get_Range("B5").Value = "Key Plan #:";
@@ -331,7 +492,7 @@ namespace SCAD
             // Iterate through level specific formulas and treatment of Stud Reporting and Calc Table worksheets
             for (int CurrentLevel = 1; CurrentLevel <= levels; CurrentLevel++)
             {
-                this.StudReportLevels(CurrentLevel);
+                this.StudTreatLevels(CurrentLevel);
             }
 
             // Return to Automatic Calculation mode
@@ -340,8 +501,8 @@ namespace SCAD
             return;
         }
 
-        // StudReportLevels() - Routine that handles level specific treatment of Stud Reports.
-        public void StudReportLevels(int level)
+        // StudTreatLevels() - Routine that handles level specific treatment of Stud Reports.
+        public void StudTreatLevels(int level)
         {
             // Declarations
             Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
@@ -401,7 +562,8 @@ namespace SCAD
             // Copy and Paste formula Values to reduce file size and increase reporting speed
             wsCalcTable.get_Range("BS6", "HN" + (iStudn + 6)).Copy();
             wsCalcTable.get_Range("BS6", "HN" + (iStudn + 6)).PasteSpecial(Excel.XlPasteType.xlPasteValues);
-  
+
+            return;  
         }
         /***************** End STUD DESIGN methods ******************/
 
