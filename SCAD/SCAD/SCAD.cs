@@ -207,7 +207,7 @@ namespace SCAD
 
             // Routine to make reports of all flagged lines.
             {
-                MessageBox.Show("Print Selected Lines.");
+                
             }
 
             return "Now back to SCAD Ribbon";
@@ -217,16 +217,14 @@ namespace SCAD
         public void StudUniqueReports(int levels)
         {
             // Declarations
-            int iStud, iStud1, iStud2, iStud3, iStud4, iStud5, iStud6; // Stores total number of stud lines for each level
+            int iStud; // Stores total number of stud lines for each level
 
             Excel.Worksheet wsOutput = Application.Worksheets.get_Item("OUTPUT");
             Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
             Excel.Worksheet wsAnalysis = Application.Worksheets.get_Item("STUD ANALYSIS");
-            Excel.Worksheet wsCalcTable1 = Application.Worksheets.get_Item("L1 Calc Table");
 
             // Establish total number of stud walls and those on level 1 through used row ranges
             iStud = wsOutput.UsedRange.Rows.Count - 2;
-            iStud1 = wsCalcTable1.UsedRange.Rows.Count - 5;
 
             Globals.SCADMain.Application.Calculation = Excel.XlCalculation.xlCalculationManual; // Set to manual calculation while flagging lines
             
@@ -330,99 +328,81 @@ namespace SCAD
                 ((Excel._Worksheet)wsOutput).Calculate();
             }
 
-            // Level 1 treatment of flagging lines
+            // Iterate through level specific formulas and treatment of Stud Reporting and Calc Table worksheets
+            for (int CurrentLevel = 1; CurrentLevel <= levels; CurrentLevel++)
             {
-                // Formula to determine if "Print All" is enabled, or if stud line is unique on its floor
-                wsCalcTable1.get_Range("A6").Formula = @"=IF($B$4=""Yes"",""Yes"",IF(BS6>0,""Yes"",""No""))";
-                wsCalcTable1.get_Range("A6").AutoFill(wsCalcTable1.get_Range("A6","A" + (iStud1 + 6)));
-
-                // Formula for assigning Key Plan numbers to walls
-                wsCalcTable1.get_Range("BS6").Value = 101;
-                wsCalcTable1.get_Range("BS7").Formula = @"=IFERROR(IF(MATCH(MAX(BT7:EP7),BS$6:BS6,0)>0,0,0),MAX(BT7:EP7))";
-                wsCalcTable1.get_Range("BS7").AutoFill(wsCalcTable1.get_Range("BS7", "BS" + (iStud1 + 6)));
-
-                // Null columns and rows while formula determines Key Plan numbers
-                wsCalcTable1.get_Range("BT6").Value = 0;
-                wsCalcTable1.get_Range("BT7").Value = 0;
-                wsCalcTable1.get_Range("BT6","BT7").AutoFill(wsCalcTable1.get_Range("BT6","BT" + (iStud1 + 6)));
-                wsCalcTable1.get_Range("BV6").Value = 0;
-                wsCalcTable1.get_Range("BW6").Value = 0;
-                wsCalcTable1.get_Range("BV6", "BW6").AutoFill(wsCalcTable1.get_Range("BV6", "HN6"));
-
-                // Sets the initial unique Key Plan number
-                wsCalcTable1.get_Range("BU6").Formula = "=BT6";
-
-                // Creates Header Row for Key Plan Numbers
-                wsCalcTable1.get_Range("BU5").Value = 101;
-                wsCalcTable1.get_Range("BV5").Value = 102;
-                wsCalcTable1.get_Range("BU5","BV5").AutoFill(wsCalcTable1.get_Range("BU5","HN5"));
-
-                // Formula for determining unique Key Plan numbers for each wall
-                wsCalcTable1.get_Range("BU7").Formula = @"=IF(AND(SUM($BT7:BT7)=0,SUM(BU$6:BU6)=0),BU$5,IFERROR(IF(AND($C7=(INDIRECT(""C""&MATCH(BU$5,BU$6:BU6,0)+5)),"
-                    + @"$AD7=(INDIRECT(""AD""&MATCH(BU$5,BU$6:BU6,0)+5)),$AE7=(INDIRECT(""AE""&MATCH(BU$5,BU$6:BU6,0)+5)),$Z7=(INDIRECT(""Z""&MATCH(BU$5,BU$6:BU6,0)+5))"
-                    + @",ABS($H7-(INDIRECT(""H""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($I7-(INDIRECT(""I""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($J7-(INDIRECT(""J""&MATCH"
-                    + @"(BU$5,BU$6:BU6,0)+5)))<=1,ABS($K7-(INDIRECT(""K""&MATCH(BU$5,BU$6:BU6,0)+5)))<=1,ABS($L7-(INDIRECT(""L""&MATCH(BU$5,BU$6:BU6,0)+5))<=1),ABS($M7-"
-                    + @"(INDIRECT(""M""&MATCH(BU$5,BU$6:BU6,0)+5)))<=1,ABS($N7-(INDIRECT(""N""&MATCH(BU$5,BU$6:BU6,0)+5)))<=1,ABS($O7-(INDIRECT(""O""&MATCH(BU$5,BU$6:BU6,0)"
-                    + @"+5)))<=100,ABS($P7-(INDIRECT(""P""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($Q7-(INDIRECT(""Q""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($R7-(INDIRECT(""R""&"
-                    + @"MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($S7-(INDIRECT(""S""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($T7-(INDIRECT(""T""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS"
-                    + @"($U7-(INDIRECT(""U""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($V7-(INDIRECT(""V""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($W7-(INDIRECT(""W""&MATCH(BU$5,BU$6:BU6,0)+5)))"
-                    + @"<=100,ABS($X7-(INDIRECT(""X""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($Y7-(INDIRECT(""Y""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100),BU$5,0),0))";
-                wsCalcTable1.get_Range("BU7").AutoFill(wsCalcTable1.get_Range("BU7", "HN7"));
-                wsCalcTable1.get_Range("BU7", "HN7").AutoFill(wsCalcTable1.get_Range("BU7", "HN" + (iStud1 + 6)));
-
-                ((Excel._Worksheet)wsCalcTable1).Calculate();
-
-                // Copy and Paste formula Values to reduce file size and increase reporting speed
-                wsCalcTable1.get_Range("BS6", "HN" + (iStud1 + 6)).Copy();
-                wsCalcTable1.get_Range("BS6", "HN" + (iStud1 + 6)).PasteSpecial(Excel.XlPasteType.xlPasteValues);
-
-                // Return to Automatic Calculation mode
-                Globals.SCADMain.Application.Calculation = Excel.XlCalculation.xlCalculationAutomatic;
+                this.StudReportLevels(CurrentLevel);
             }
 
-            // Level 2 treatment of flagging lines
-            if (levels > 1)
-            {
-                // Establish total number of stud walls on level 2 through used row ranges
-                Excel.Worksheet wsCalcTable2 = Application.Worksheets.get_Item("L2 Calc Table");
-                iStud2 = wsCalcTable2.UsedRange.Rows.Count - 5;
-            }
+            // Return to Automatic Calculation mode
+            Globals.SCADMain.Application.Calculation = Excel.XlCalculation.xlCalculationAutomatic;
 
-            // Level 3 treatment of flagging lines
-            if (levels > 2)
-            {
-                // Establish total number of stud walls on level 3 through used row ranges
-                Excel.Worksheet wsCalcTable3 = Application.Worksheets.get_Item("L3 Calc Table");
-                iStud3 = wsCalcTable3.UsedRange.Rows.Count - 5;
-            }
-
-            // Level 4 treatment of flagging lines
-            if (levels > 3)
-            {
-                // Establish total number of stud walls on level 4 through used row ranges
-                Excel.Worksheet wsCalcTable4 = Application.Worksheets.get_Item("L4 Calc Table");
-                iStud4 = wsCalcTable4.UsedRange.Rows.Count - 5;
-            }
-
-            // Level 5 treatment of flagging lines
-            if (levels > 4)
-            {
-                // Establish total number of stud walls on level 5 through used row ranges
-                Excel.Worksheet wsCalcTable5 = Application.Worksheets.get_Item("L5 Calc Table");
-                iStud5 = wsCalcTable5.UsedRange.Rows.Count - 5;
-            }
-
-            // Level 6 treatment of flagging lines
-            if (levels > 5)
-            {
-                // Establish total number of stud walls on level 6 through used row ranges
-                Excel.Worksheet wsCalcTable6 = Application.Worksheets.get_Item("L6 Calc Table");
-                iStud6 = wsCalcTable6.UsedRange.Rows.Count - 5;
-            }
-            
             return;
         }
 
+        // StudReportLevels() - Routine that handles level specific treatment of Stud Reports.
+        public void StudReportLevels(int level)
+        {
+            // Declarations
+            Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
+            Excel.Worksheet wsCalcTable = new Excel.Worksheet();
+            foreach (Excel.Worksheet sheet in this.Application.Sheets)
+            {
+                if (sheet.Name == "L" + level + " Calc Table")
+                {
+                    wsCalcTable = sheet;
+                    break;
+                }
+            }
+
+            // Establish total number of stud walls on level through used row ranges
+            int iStudn = wsCalcTable.UsedRange.Rows.Count - 5;
+
+            // Formula to determine if "Print All" is enabled, or if stud line is unique on its floor
+            wsCalcTable.get_Range("A6").Formula = @"=IF($B$4=""Yes"",""Yes"",IF(BS6>0,""Yes"",""No""))";
+            wsCalcTable.get_Range("A6").AutoFill(wsCalcTable.get_Range("A6", "A" + (iStudn + 6)));
+
+            // Formula for assigning Key Plan numbers to walls
+            wsCalcTable.get_Range("BS6").Value = (level * 100) + 1;
+            wsCalcTable.get_Range("BS7").Formula = @"=IFERROR(IF(MATCH(MAX(BT7:EP7),BS$6:BS6,0)>0,0,0),MAX(BT7:EP7))";
+            wsCalcTable.get_Range("BS7").AutoFill(wsCalcTable.get_Range("BS7", "BS" + (iStudn + 6)));
+
+            // Null columns and rows while formula determines Key Plan numbers
+            wsCalcTable.get_Range("BT6").Value = 0;
+            wsCalcTable.get_Range("BT7").Value = 0;
+            wsCalcTable.get_Range("BT6", "BT7").AutoFill(wsCalcTable.get_Range("BT6", "BT" + (iStudn + 6)));
+            wsCalcTable.get_Range("BV6").Value = 0;
+            wsCalcTable.get_Range("BW6").Value = 0;
+            wsCalcTable.get_Range("BV6", "BW6").AutoFill(wsCalcTable.get_Range("BV6", "HN6"));
+
+            // Sets the initial unique Key Plan number
+            wsCalcTable.get_Range("BU6").Formula = "=BT6";
+
+            // Creates Header Row for Key Plan Numbers
+            wsCalcTable.get_Range("BU5").Value = (level * 100) + 1;
+            wsCalcTable.get_Range("BV5").Value = (level * 100) + 2;
+            wsCalcTable.get_Range("BU5", "BV5").AutoFill(wsCalcTable.get_Range("BU5", "HN5"));
+
+            // Formula for determining unique Key Plan numbers for each wall
+            wsCalcTable.get_Range("BU7").Formula = @"=IF(AND(SUM($BT7:BT7)=0,SUM(BU$6:BU6)=0),BU$5,IFERROR(IF(AND($C7=(INDIRECT(""C""&MATCH(BU$5,BU$6:BU6,0)+5)),"
+                + @"$AD7=(INDIRECT(""AD""&MATCH(BU$5,BU$6:BU6,0)+5)),$AE7=(INDIRECT(""AE""&MATCH(BU$5,BU$6:BU6,0)+5)),$Z7=(INDIRECT(""Z""&MATCH(BU$5,BU$6:BU6,0)+5))"
+                + @",ABS($H7-(INDIRECT(""H""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($I7-(INDIRECT(""I""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($J7-(INDIRECT(""J""&MATCH"
+                + @"(BU$5,BU$6:BU6,0)+5)))<=1,ABS($K7-(INDIRECT(""K""&MATCH(BU$5,BU$6:BU6,0)+5)))<=1,ABS($L7-(INDIRECT(""L""&MATCH(BU$5,BU$6:BU6,0)+5))<=1),ABS($M7-"
+                + @"(INDIRECT(""M""&MATCH(BU$5,BU$6:BU6,0)+5)))<=1,ABS($N7-(INDIRECT(""N""&MATCH(BU$5,BU$6:BU6,0)+5)))<=1,ABS($O7-(INDIRECT(""O""&MATCH(BU$5,BU$6:BU6,0)"
+                + @"+5)))<=100,ABS($P7-(INDIRECT(""P""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($Q7-(INDIRECT(""Q""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($R7-(INDIRECT(""R""&"
+                + @"MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($S7-(INDIRECT(""S""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($T7-(INDIRECT(""T""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS"
+                + @"($U7-(INDIRECT(""U""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($V7-(INDIRECT(""V""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($W7-(INDIRECT(""W""&MATCH(BU$5,BU$6:BU6,0)+5)))"
+                + @"<=100,ABS($X7-(INDIRECT(""X""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100,ABS($Y7-(INDIRECT(""Y""&MATCH(BU$5,BU$6:BU6,0)+5)))<=100),BU$5,0),0))";
+            wsCalcTable.get_Range("BU7").AutoFill(wsCalcTable.get_Range("BU7", "HN7"));
+            wsCalcTable.get_Range("BU7", "HN7").AutoFill(wsCalcTable.get_Range("BU7", "HN" + (iStudn + 6)));
+
+            ((Excel._Worksheet)wsCalcTable).Calculate();
+
+            // Copy and Paste formula Values to reduce file size and increase reporting speed
+            wsCalcTable.get_Range("BS6", "HN" + (iStudn + 6)).Copy();
+            wsCalcTable.get_Range("BS6", "HN" + (iStudn + 6)).PasteSpecial(Excel.XlPasteType.xlPasteValues);
+  
+        }
         /***************** End STUD DESIGN methods ******************/
 
         /***************** LATERAL DESIGN methods *******************/
