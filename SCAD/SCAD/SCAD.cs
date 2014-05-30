@@ -280,11 +280,13 @@ namespace SCAD
                 // Value Declarations
                 int iStudn = (wsCalcTable.UsedRange.Rows.Count - 5);                                                    // Total Number of stud lines on Calc sheet
                 string PrintAll = System.Convert.ToString(wsCalcTable.get_Range("B4").Value2);                          // Holds Print All flag for level
-                string[] LineLabels = null;
-                if (wsCalcTable.get_Range("BS6").Value != null)                                                         // If Key Plan numbers exist, create label array
+                System.Object[,] LineLabels = new System.Object[iStudn,1];                                              // Stores Key Plan numbers if they exist
+                bool KeyPlansExist = false;
+                if (wsCalcTable.get_Range("BS6").Text != "")
                 {
-                    System.Array LineVals = (System.Array)wsCalcTable.get_Range("BS6", "BS" + (6 + iStudn)).Value2;
-                    LineLabels = LineVals.OfType<object>().Select(o => o.ToString()).ToArray();
+                    // Checks if Key plans exist, if they do, assign to LineLabels
+                    KeyPlansExist = true;
+                    LineLabels = (System.Object[,])wsCalcTable.get_Range("BS6", "BS" + (6 + iStudn)).Value2;
                 }
                 System.Object[,] StudLines = (System.Object[,])wsCalcTable.get_Range("A6", "AE" + (6 + iStudn)).Value2; // Holds stud line data for reports
                 
@@ -334,20 +336,21 @@ namespace SCAD
 
                         // Create PDF file of Stud Analysis Report for each line
                         {
-                            // Label used for individual report file names
+                            // Label used for individual report file names, uses Key plan numbers if exist, otherwise Temp name
                             string StudFileName = "Temp";
-                            if (String.IsNullOrEmpty(LineLabels[i]))
+                            if (KeyPlansExist == false)
                             {
+                                MessageBox.Show("Temp filename");
                                 StudFileName = System.Convert.ToString(StudFileName + i);
                             }
                             else
                             {
-                                StudFileName = LineLabels[i];
+                                MessageBox.Show("LineLabels Filesname");
+                                StudFileName = LineLabels[i,1].ToString();
                             }
 
-                            MessageBox.Show(StudFileName);
-
-                            if (JobNumber == "")                                // Place in Temp folder if no Job Number given
+                            // Place in Temp folder if no Job Number given
+                            if (JobNumber == "")                                
                             {
                                 wsStudAnalysis.ExportAsFixedFormat(
                                     Type: Excel.XlFixedFormatType.xlTypePDF, 
@@ -356,7 +359,8 @@ namespace SCAD
                                     IgnorePrintAreas:false,
                                     OpenAfterPublish:false);
                             }
-                            else
+                            // Otherwise place in Job Number folder
+                            else 
                             {
                                 wsStudAnalysis.ExportAsFixedFormat(
                                     Type: Excel.XlFixedFormatType.xlTypePDF, 
