@@ -106,7 +106,11 @@ namespace SCAD
 
         private void PrintReportsLateral_Click(object sender, RibbonControlEventArgs e)
         {
-            MessageBox.Show("This will create lateral PDF reports eventually");
+            string Response = Globals.SCADMain.LateralReportPacks();
+            if (Response != null)
+            {
+                MessageBox.Show(Response);
+            }
         }
 
         private void ExportRISADiaphragm_Click(object sender, RibbonControlEventArgs e)

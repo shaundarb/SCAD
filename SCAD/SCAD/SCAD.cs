@@ -17,21 +17,21 @@ namespace SCAD
          *          ;LC0         ,CCi                               *
          *          tLLL:          fi                               *
          *           LLLLLLt,                                       *
-         *            tGLLLLCLLt:     ...      ..                   *
+         *            tGLLLLCLLt:     ..........                   *
          *                :GGLLLLLLLGGCt1fCGGLttLi                  *
          *          i         iLCLLLLC          CLL                 *
-         *          1C       fLLC;tLLG.          ,G                 *
+         *          1C        LLC;tLLG.          ,G                 *
          *          1LLL    LCLLLiLC0.            ..                *
          *          t0  ;C0CLLLC0Gi             .                   *
          *                    1LLLL.           1LL                  *
          *                    :LLLLL         .tCLLL                 *
          *                     LLLLL,      ;fG,  LLiG               *
-         *                       fCLLLt.  iLG.  tCLLt               *
+         *                       fCLLLt.  iLG.. .CLLt               *
          *                           tG00CC000CL.iLLCL              *
          *                              1LC       ;LLLC             *
          *                             tC1          LLLC.           *
-         *                             fG,            CLLL.         *
-         *                           iLC;              fLLLf        *
+         *                            tfG,            CLLL.         *
+         *                           iLC;              fLLL;        *
          *                        :iiLCCCCC         fCCCCCCCCCC     *
          ********* STRUCTURAL CAD ANALYSIS & DESIGN TOOLS ***********
          * Version 2.0                       Release: May 2014      *   
@@ -43,6 +43,9 @@ namespace SCAD
          * + 2.0 - May 2014, Shaun Smith                            *
          *      - Migration to C# and .NET framework                *
          *      - Optimizations and Enchancements                   *
+         *      - Changed Lateral Reports from printing to PDF      *
+         *          creation                                        *
+         *      -                                                   
          ************************************************************/
 
 
@@ -171,6 +174,13 @@ namespace SCAD
         // StudLineReports() -- Creates PDF reports of flagged stud lines.
         public string StudLineReports()
         {
+            /* StudLineReports() -- Called by clicking "Create Stud Reports" on
+             * the SCAD Ribbon. Routine cycles through existing Stud lines and 
+             * will, depending on user input, either create Key plan numbers for
+             * unique stud walls on each level, or simply create pdfs of those walls
+             * already selected in the "Ln Calc Table" worksheets. They then placed
+             * in a directory under C:\SCAD\Reports and the folder is opened */
+
             // Call Stud Report Dialog
             SCAD.StudPrintLines StudReportForm = new SCAD.StudPrintLines();
             StudReportForm.ShowDialog();
@@ -246,6 +256,11 @@ namespace SCAD
         // MkReportDirs() -- Creates Unique Report Directories.
         public void MkReportDirs(string JobNumber)
         {
+            /* MkReportDirs() -- Creates report directories for pdf reports to be
+             * placed into from both Stud and Lateral reporting schemes. Uses the
+             * Job Number supplied by the user as the directory name, and defaults
+             * to Temp if none is given */
+
             // Check if Report Directories exists and delete them
             if (System.IO.Directory.Exists(@"C:\SCAD\Reports\" + JobNumber + @"\"))
             {
@@ -272,6 +287,10 @@ namespace SCAD
         // StudLevelReports() -- Creates the actual PDF reports for a given level
         public void StudLevelReports(int level, string JobNumber)
         {
+            /* StudLevelReports() -- Called by StudLineReports() to create the actual
+             * PDF reports for each stud line on a given level, if it is flagged to be 
+             * printed. */
+
             // Worksheet Declarations
             Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
             Excel.Worksheet wsCalcTable = new Excel.Worksheet();
@@ -387,6 +406,12 @@ namespace SCAD
         // StudUniqueReports() -- Sets up workbook to make reports for all unique walls on each level.
         public void StudUniqueReports(int levels)
         {
+            /* StudUniqeReports() -- Called by StudLineReports() if the "Create Reports for
+             * all unique stud lines" option is selected by the user. This creates a Key Plan
+             * scheme and formula for each level to determine which walls are unique. Those 
+             * unique walls are then flagged to be printed before the routine returns to the
+             * normal reporting workflow. */
+
             // Declarations
             int iStud; // Stores total number of stud lines for each level
 
@@ -512,6 +537,10 @@ namespace SCAD
         // StudTreatLevels() - Routine that handles level specific treatment of Stud Reports.
         public void StudTreatLevels(int level)
         {
+            /* StudTreatLevels() -- Called by StudUniqueReports() to handle repeated level specfic
+             * routines that were long enough to warrant its own method. Sets up each level to
+             * reflect Key Plan numbers and formulas for print flags */
+
             // Declarations
             Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
             Excel.Worksheet wsCalcTable = new Excel.Worksheet();
@@ -660,6 +689,172 @@ namespace SCAD
             }
 
             return null;
+        }
+
+        // LateralReportPacks() -- Creates PDF reports of Lateral Design packs
+        public string LateralReportPacks()
+        {
+            /* LateralReportPacks() -- Creates the PDF reports of Lateral Design packs
+             * for the imported CAD data, Seismic Load Input, Wind Load Input, and
+             * Wall Geometry Input data.*/
+
+            // Open confirm dialog box.
+            SCAD.LateralReportConfirm ConfirmBox = new SCAD.LateralReportConfirm();
+            ConfirmBox.ShowDialog();
+            
+            if (ConfirmBox.ReportConfirm == false)
+            {
+                return null;
+            }
+
+            // Check to see if in Lateral Design workbook
+            {
+                bool found = false;
+                foreach (Excel.Worksheet sheet in this.Application.Sheets)
+                {
+                    if (sheet.Name == "Iteration")
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    return "This routine may only be called from the Lateral Design workbook after preliminary SCAD stud design has been completed.";
+                }
+            }
+
+            // Declarations
+            Excel.Worksheet wsCAD = Application.Worksheets.get_Item("CAD IMPORT");
+            Excel.Worksheet wsCode = Application.Worksheets.get_Item("Code Info");
+            Excel.Worksheet wsWind = Application.Worksheets.get_Item("Wind Load Input");
+            Excel.Worksheet wsSeismic = Application.Worksheets.get_Item("Seismic Load Input");
+            Excel.Worksheet wsWallGeom = Application.Worksheets.get_Item("Wall Geometry Input");
+            Excel.Worksheet wsIteration = Application.Worksheets.get_Item("Iteraion");
+            Excel.Worksheet wsPrint = Application.Worksheets.get_Item("Print");
+
+            int xWalls = (int)wsCAD.get_Range("BK7").Value2; // Stores the total number of Shear Walls in either X Direction
+            int yWalls = (int)wsCAD.get_Range("BW7").Value2; // Stores the total number of Shear Walls in either Y Direction
+            int levels = (int)wsCAD.get_Range("I3").Value2; // Stores the total number of levels in the project
+            string JobNumber = "Temp"; // Stores the Job Number for the project
+
+            // Make Directories for Reports
+            this.MkReportDirs(JobNumber);
+
+            // Create a PDF report of the "Code Info" worksheet, the print range is specified first
+            Excel.Range rngPrint = wsCode.get_Range("B2", "U104");
+            rngPrint.ExportAsFixedFormat(
+                                Type: Excel.XlFixedFormatType.xlTypePDF,
+                                Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Code_Info.pdf",
+                                Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                                IgnorePrintAreas: false,
+                                OpenAfterPublish: false);
+
+            // Create a PDF report of the "Wind Load Input" worksheet, the print range is specified first depending on levels
+            rngPrint = wsWind.get_Range("C2", "U70");
+            switch (levels)
+            {
+                case 3 :
+                case 4 :
+                    rngPrint = wsWind.get_Range("C2", "U132");
+                    break;
+                case 5 :
+                case 6 :
+                    rngPrint = wsWind.get_Range("C2", "U194");
+                    break;
+            }
+            rngPrint.ExportAsFixedFormat(
+                                Type: Excel.XlFixedFormatType.xlTypePDF,
+                                Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wind_Load_Input.pdf",
+                                Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                                IgnorePrintAreas: false,
+                                OpenAfterPublish: false);
+
+            // Create a PDF report of the "Seismic Load Input" worksheet, the print range is specified first depending on levels
+            rngPrint = wsSeismic.get_Range("C2", "U70");
+            switch (levels)
+            {
+                case 3 :
+                case 4 :
+                    rngPrint = wsSeismic.get_Range("C2", "U132");
+                    break;
+                case 5 :
+                case 6 :
+                    rngPrint = wsSeismic.get_Range("C2", "U194");
+                    break;
+            }
+            rngPrint.ExportAsFixedFormat(
+                                Type: Excel.XlFixedFormatType.xlTypePDF,
+                                Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Seismic_Load_Input.pdf",
+                                Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                                IgnorePrintAreas: false,
+                                OpenAfterPublish: false);
+
+            // Create a PDF report of the wall lines on  "Wall Geometry Input" worksheet
+            // The print range is specified first depending on number of X direction walls and Level
+            for (int i = 0; i < levels; i++)
+            {
+                rngPrint = wsWallGeom.get_Range("B" + 12 + (i * 213), "Q" + 78 + (i * 213));
+                rngPrint.ExportAsFixedFormat(
+                    Type: Excel.XlFixedFormatType.xlTypePDF,
+                    Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L"+(i+1)+@"X1.pdf",
+                    Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                    IgnorePrintAreas: false,
+                    OpenAfterPublish: false);
+                if (xWalls >= 68)
+                {
+                    rngPrint = wsWallGeom.get_Range("B" + 79 + (i * 213), "Q" + 145 + (i * 213));
+                    rngPrint.ExportAsFixedFormat(
+                        Type: Excel.XlFixedFormatType.xlTypePDF,
+                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"X2.pdf",
+                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                        IgnorePrintAreas: false,
+                        OpenAfterPublish: false);
+                }
+                if (xWalls >= 134)
+                {
+                    rngPrint = wsWallGeom.get_Range("B" + 146 + (i * 213), "Q" + 212 + (i * 213));
+                    rngPrint.ExportAsFixedFormat(
+                        Type: Excel.XlFixedFormatType.xlTypePDF,
+                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"X3.pdf",
+                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                        IgnorePrintAreas: false,
+                        OpenAfterPublish: false);
+                }
+            }
+            // Create a PDF report of the wall lines on "Wall Geometry Input" worksheet, 
+            // The print range is specified first depending on number of Y direction walls and level
+            for (int i = 0; i < levels; i++)
+            {
+                rngPrint = wsWallGeom.get_Range("S" + 12 + (i * 213), "AH" + 78 + (i * 213));
+                rngPrint.ExportAsFixedFormat(
+                    Type: Excel.XlFixedFormatType.xlTypePDF,
+                    Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"Y1.pdf",
+                    Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                    IgnorePrintAreas: false,
+                    OpenAfterPublish: false);
+                if (yWalls >= 68)
+                {
+                    rngPrint = wsWallGeom.get_Range("S" + 79 + (i * 213), "AH" + 145 + (i * 213));
+                    rngPrint.ExportAsFixedFormat(
+                        Type: Excel.XlFixedFormatType.xlTypePDF,
+                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"Y2.pdf",
+                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                        IgnorePrintAreas: false,
+                        OpenAfterPublish: false);
+                }
+                if (yWalls >= 134)
+                {
+                    rngPrint = wsWallGeom.get_Range("S" + 146 + (i * 213), "AH" + 212 + (i * 213));
+                    rngPrint.ExportAsFixedFormat(
+                        Type: Excel.XlFixedFormatType.xlTypePDF,
+                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"Y3.pdf",
+                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                        IgnorePrintAreas: false,
+                        OpenAfterPublish: false);
+                }
+            }
+            return "Now back to the SCAD Ribbon.";
         }
         /***************** End LATERAL DESIGN methods ***************/
 
