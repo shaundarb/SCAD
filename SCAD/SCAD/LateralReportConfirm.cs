@@ -32,11 +32,13 @@ namespace SCAD
         private void buttonOK_Click(object sender, EventArgs e)
         {
             ReportConfirm = true;
+            this.Close();
         }
 
         private void buttonCancel_Click(object sender, EventArgs e)
         {
             ReportConfirm = false;
+            this.Close();
         }
     }
 }

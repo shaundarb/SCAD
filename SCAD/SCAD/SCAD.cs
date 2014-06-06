@@ -55,6 +55,37 @@ namespace SCAD
 
         }
 
+        // MkReportDirs() -- Creates Unique Report Directories.
+        public void MkReportDirs(string JobNumber)
+        {
+            /* MkReportDirs() -- Creates report directories for pdf reports to be
+             * placed into from both Stud and Lateral reporting schemes. Uses the
+             * Job Number supplied by the user as the directory name, and defaults
+             * to Temp if none is given */
+
+            // Check if Report Directories exists and delete them
+            if (System.IO.Directory.Exists(@"C:\SCAD\Reports\" + JobNumber + @"\"))
+            {
+                System.IO.Directory.Delete(@"C:\SCAD\Reports\" + JobNumber + @"\", true);
+            }
+            if (System.IO.Directory.Exists(@"C:\SCAD\Reports\Temp\"))
+            {
+                System.IO.Directory.Delete(@"C:\SCAD\Reports\Temp\", true);
+            }
+
+            // Create new report directories, directory is "Temp" if no Job number exists
+            if (JobNumber == "")
+            {
+                System.IO.Directory.CreateDirectory(@"C:\SCAD\Reports\Temp\");
+            }
+            else
+            {
+                System.IO.Directory.CreateDirectory(@"C:\SCAD\Reports\" + JobNumber + @"\");
+            }
+
+            return;
+        }
+
         /******************** STUD DESIGN methods *******************/
 
         // StudDesign() -- Begins initial Stud Design from Data.
@@ -251,37 +282,6 @@ namespace SCAD
             }
 
             return "Now back to SCAD Ribbon";
-        }
-
-        // MkReportDirs() -- Creates Unique Report Directories.
-        public void MkReportDirs(string JobNumber)
-        {
-            /* MkReportDirs() -- Creates report directories for pdf reports to be
-             * placed into from both Stud and Lateral reporting schemes. Uses the
-             * Job Number supplied by the user as the directory name, and defaults
-             * to Temp if none is given */
-
-            // Check if Report Directories exists and delete them
-            if (System.IO.Directory.Exists(@"C:\SCAD\Reports\" + JobNumber + @"\"))
-            {
-                System.IO.Directory.Delete(@"C:\SCAD\Reports\" + JobNumber + @"\", true);
-            }
-            if (System.IO.Directory.Exists(@"C:\SCAD\Reports\Temp\"))
-            {
-                System.IO.Directory.Delete(@"C:\SCAD\Reports\Temp\", true);
-            }
-
-            // Create new report directories, directory is "Temp" if no Job number exists
-            if (JobNumber == "")
-            {
-                System.IO.Directory.CreateDirectory(@"C:\SCAD\Reports\Temp\");
-            }
-            else
-            {
-                System.IO.Directory.CreateDirectory(@"C:\SCAD\Reports\" + JobNumber + @"\");
-            }
-
-            return;
         }
 
         // StudLevelReports() -- Creates the actual PDF reports for a given level
@@ -701,7 +701,7 @@ namespace SCAD
             // Open confirm dialog box.
             SCAD.LateralReportConfirm ConfirmBox = new SCAD.LateralReportConfirm();
             ConfirmBox.ShowDialog();
-            
+
             if (ConfirmBox.ReportConfirm == false)
             {
                 return null;
@@ -730,13 +730,12 @@ namespace SCAD
             Excel.Worksheet wsWind = Application.Worksheets.get_Item("Wind Load Input");
             Excel.Worksheet wsSeismic = Application.Worksheets.get_Item("Seismic Load Input");
             Excel.Worksheet wsWallGeom = Application.Worksheets.get_Item("Wall Geometry Input");
-            Excel.Worksheet wsIteration = Application.Worksheets.get_Item("Iteraion");
-            Excel.Worksheet wsPrint = Application.Worksheets.get_Item("Print");
+            Excel.Worksheet wsIteration = Application.Worksheets.get_Item("Iteration");
 
             int xWalls = (int)wsCAD.get_Range("BK7").Value2; // Stores the total number of Shear Walls in either X Direction
             int yWalls = (int)wsCAD.get_Range("BW7").Value2; // Stores the total number of Shear Walls in either Y Direction
             int levels = (int)wsCAD.get_Range("I3").Value2; // Stores the total number of levels in the project
-            string JobNumber = "Temp"; // Stores the Job Number for the project
+            string JobNumber = wsCode.get_Range("R4").Value2.ToString(); // Stores the Job Number for the project
 
             // Make Directories for Reports
             this.MkReportDirs(JobNumber);
@@ -754,12 +753,12 @@ namespace SCAD
             rngPrint = wsWind.get_Range("C2", "U70");
             switch (levels)
             {
-                case 3 :
-                case 4 :
+                case 3:
+                case 4:
                     rngPrint = wsWind.get_Range("C2", "U132");
                     break;
-                case 5 :
-                case 6 :
+                case 5:
+                case 6:
                     rngPrint = wsWind.get_Range("C2", "U194");
                     break;
             }
@@ -774,12 +773,12 @@ namespace SCAD
             rngPrint = wsSeismic.get_Range("C2", "U70");
             switch (levels)
             {
-                case 3 :
-                case 4 :
+                case 3:
+                case 4:
                     rngPrint = wsSeismic.get_Range("C2", "U132");
                     break;
-                case 5 :
-                case 6 :
+                case 5:
+                case 6:
                     rngPrint = wsSeismic.get_Range("C2", "U194");
                     break;
             }
@@ -794,67 +793,182 @@ namespace SCAD
             // The print range is specified first depending on number of X direction walls and Level
             for (int i = 0; i < levels; i++)
             {
-                rngPrint = wsWallGeom.get_Range("B" + 12 + (i * 213), "Q" + 78 + (i * 213));
-                rngPrint.ExportAsFixedFormat(
-                    Type: Excel.XlFixedFormatType.xlTypePDF,
-                    Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L"+(i+1)+@"X1.pdf",
-                    Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
-                    IgnorePrintAreas: false,
-                    OpenAfterPublish: false);
+                rngPrint = wsWallGeom.get_Range("B" + (2 + (i * 213)), "Q" + (78 + (i * 213)));
+
                 if (xWalls >= 68)
                 {
-                    rngPrint = wsWallGeom.get_Range("B" + 79 + (i * 213), "Q" + 145 + (i * 213));
-                    rngPrint.ExportAsFixedFormat(
-                        Type: Excel.XlFixedFormatType.xlTypePDF,
-                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"X2.pdf",
-                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
-                        IgnorePrintAreas: false,
-                        OpenAfterPublish: false);
+                    rngPrint = wsWallGeom.get_Range("B" + (2 + (i * 213)), "Q" + (145 + (i * 213)));
                 }
+
                 if (xWalls >= 134)
                 {
-                    rngPrint = wsWallGeom.get_Range("B" + 146 + (i * 213), "Q" + 212 + (i * 213));
-                    rngPrint.ExportAsFixedFormat(
+                    rngPrint = wsWallGeom.get_Range("B" + (2 + (i * 213)), "Q" + (212 + (i * 213)));
+                }
+
+                rngPrint.ExportAsFixedFormat(
                         Type: Excel.XlFixedFormatType.xlTypePDF,
-                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"X3.pdf",
+                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"X.pdf",
                         Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
                         IgnorePrintAreas: false,
                         OpenAfterPublish: false);
-                }
             }
+
             // Create a PDF report of the wall lines on "Wall Geometry Input" worksheet, 
             // The print range is specified first depending on number of Y direction walls and level
             for (int i = 0; i < levels; i++)
             {
-                rngPrint = wsWallGeom.get_Range("S" + 12 + (i * 213), "AH" + 78 + (i * 213));
+                rngPrint = wsWallGeom.get_Range("S" + (2 + (i * 213)), "AH" + (78 + (i * 213)));
+
+                if (yWalls >= 68)
+                {
+                    rngPrint = wsWallGeom.get_Range("S" + (2 + (i * 213)), "AH" + (145 + (i * 213)));
+                }
+
+                if (yWalls >= 134)
+                {
+                    rngPrint = wsWallGeom.get_Range("S" + (2 + (i * 213)), "AH" + (212 + (i * 213)));
+                }
+
+                rngPrint.ExportAsFixedFormat(
+                        Type: Excel.XlFixedFormatType.xlTypePDF,
+                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"Y.pdf",
+                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                        IgnorePrintAreas: false,
+                        OpenAfterPublish: false);
+            }
+
+            // Create a PDF report of the wall lines on "Iteration" worksheet
+            // The print range is specified first depending on number of X direction walls and Level
+            string CellColumn1 = "C";
+            string CellColumn2 = "AA";
+
+            for (int i = 0; i < levels; i++)
+            {
+                switch (i)              // Select proper cell column range depending on level
+                {
+                    case 0:
+                        CellColumn1 = "C";
+                        CellColumn2 = "AA";
+                        break;
+                    case 1:
+                        CellColumn1 = "BZ";
+                        CellColumn2 = "CX";
+                        break;
+                    case 2:
+                        CellColumn1 = "EW";
+                        CellColumn2 = "FU";
+                        break;
+                    case 3:
+                        CellColumn1 = "HT";
+                        CellColumn2 = "IR";
+                        break;
+                    case 4:
+                        CellColumn1 = "KQ";
+                        CellColumn2 = "LO";
+                        break;
+                    case 5:
+                        CellColumn1 = "NN";
+                        CellColumn2 = "OL";
+                        break;
+                }
+
+                //Select Row Range depending on wall count
+                rngPrint = wsIteration.get_Range(CellColumn1 + 15, CellColumn2 + 64);
+
+                if (xWalls >= 50)
+                {
+                    rngPrint = wsIteration.get_Range(CellColumn1 + 15, CellColumn2 + 114);
+                }
+
+                if (xWalls >= 100)
+                {
+                    rngPrint = wsIteration.get_Range(CellColumn1 + 15, CellColumn2 + 164);
+                }
+
+                if (xWalls >= 150)
+                {
+                    rngPrint = wsIteration.get_Range(CellColumn1 + 15, CellColumn2 + 214);
+                }
+
+                // Create PDF Report
+                rngPrint.ExportAsFixedFormat(
+                        Type: Excel.XlFixedFormatType.xlTypePDF,
+                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Iteration_L" + (i + 1) + @"X.pdf",
+                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
+                        IgnorePrintAreas: false,
+                        OpenAfterPublish: false);
+            }
+
+            // Create a PDF report of the wall lines on "Iteraion" worksheet, 
+            // The print range is specified first depending on number of Y direction walls and level
+            for (int i = 0; i < levels; i++)
+            {
+                switch (i)          // Select proper cell column range depending on level
+                {
+                    case 0:
+                        CellColumn1 = "AG";
+                        CellColumn2 = "BE";
+                        break;
+                    case 1:
+                        CellColumn1 = "DD";
+                        CellColumn2 = "EB";
+                        break;
+                    case 2:
+                        CellColumn1 = "GA";
+                        CellColumn2 = "GY";
+                        break;
+                    case 3:
+                        CellColumn1 = "IX";
+                        CellColumn2 = "JV";
+                        break;
+                    case 4:
+                        CellColumn1 = "LU";
+                        CellColumn2 = "MS";
+                        break;
+                    case 5:
+                        CellColumn1 = "OR";
+                        CellColumn2 = "PP";
+                        break;
+                }
+
+                //Select Row Range depending on wall count
+                rngPrint = wsIteration.get_Range(CellColumn1 + 15, CellColumn2 + 64);
+
+                if (yWalls >= 50)   
+                {
+                    rngPrint = wsIteration.get_Range(CellColumn1 + 15, CellColumn2 + 114);
+                }
+
+                if (yWalls >= 100)
+                {
+                    rngPrint = wsIteration.get_Range(CellColumn1 + 15, CellColumn2 + 164);
+                }
+
+                if (yWalls >= 150)
+                {
+                    rngPrint = wsIteration.get_Range(CellColumn1 + 15, CellColumn2 + 214);
+                }
+
+                // Create PDF Report
                 rngPrint.ExportAsFixedFormat(
                     Type: Excel.XlFixedFormatType.xlTypePDF,
-                    Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"Y1.pdf",
+                    Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Iteration_L" + (i + 1) + @"Y.pdf",
                     Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
                     IgnorePrintAreas: false,
                     OpenAfterPublish: false);
-                if (yWalls >= 68)
-                {
-                    rngPrint = wsWallGeom.get_Range("S" + 79 + (i * 213), "AH" + 145 + (i * 213));
-                    rngPrint.ExportAsFixedFormat(
-                        Type: Excel.XlFixedFormatType.xlTypePDF,
-                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"Y2.pdf",
-                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
-                        IgnorePrintAreas: false,
-                        OpenAfterPublish: false);
-                }
-                if (yWalls >= 134)
-                {
-                    rngPrint = wsWallGeom.get_Range("S" + 146 + (i * 213), "AH" + 212 + (i * 213));
-                    rngPrint.ExportAsFixedFormat(
-                        Type: Excel.XlFixedFormatType.xlTypePDF,
-                        Filename: @"C:\SCAD\Reports\" + JobNumber + @"\Wall_Geometry_Output_L" + (i + 1) + @"Y3.pdf",
-                        Quality: Excel.XlFixedFormatQuality.xlQualityMinimum,
-                        IgnorePrintAreas: false,
-                        OpenAfterPublish: false);
-                }
             }
-            return "Now back to the SCAD Ribbon.";
+
+            // Open folder where reports are held
+            if (JobNumber == "")
+            {
+                System.Diagnostics.Process.Start("explorer.exe", @"/select, C:\SCAD\Reports\Temp\");
+            }
+            else
+            {
+                System.Diagnostics.Process.Start("explorer.exe", @"/select, C:\SCAD\Reports\" + JobNumber + @"\");
+            }
+
+            return null;
         }
         /***************** End LATERAL DESIGN methods ***************/
 
