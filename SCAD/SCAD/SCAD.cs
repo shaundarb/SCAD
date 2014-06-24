@@ -95,12 +95,6 @@ namespace SCAD
              * Proceeds to process Raw AutoCAD Stud data from Excel file and passes design
              * information from the user.*/
 
-            // Testing interaction between SCADMain and SCADRibbon buttons.
-            MessageBox.Show("This is in SCADMain.");
-            Excel.Worksheet activeSheet = Application.ActiveSheet;
-            Excel.Range FirstRow = activeSheet.get_Range("A1");
-            FirstRow.Value2 = "Stud stuff has been done to this now.";
-
             // Testing launching and return of StudLaunch Form
             SCAD.StudLaunch StudForm = new SCAD.StudLaunch();
             StudForm.ShowDialog();
