@@ -99,6 +99,16 @@ namespace SCAD
             SCAD.StudLaunch StudForm = new SCAD.StudLaunch();
             StudForm.ShowDialog();
 
+            // If Cancel is clicked, so prompt isn't displayed.
+            if (StudForm.StudCancel == true)
+            {
+                return null;
+            }
+
+            // Create local arrDataSort[] array from form values
+            object[] arrDataSort = new object[61];
+            arrDataSort = StudForm.arrDataSort;
+            
             return "Now back to SCADRibbon.";
         }
 
