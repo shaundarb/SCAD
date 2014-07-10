@@ -180,6 +180,12 @@
     can be found.
   -->
   <ItemGroup>
+    <Compile Include="ProgressBarSort.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ProgressBarSort.Designer.cs">
+      <DependentUpon>ProgressBarSort.cs</DependentUpon>
+    </Compile>
     <Compile Include="LateralReportConfirm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -213,6 +219,9 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="ProgressBarSort.resx">
+      <DependentUpon>ProgressBarSort.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="LateralReportConfirm.resx">
       <DependentUpon>LateralReportConfirm.cs</DependentUpon>
     </EmbeddedResource>

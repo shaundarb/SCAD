@@ -87,6 +87,23 @@ namespace SCAD
         }
 
         /******************** STUD DESIGN methods *******************/
+        // StudLineData -- Class that caters to all the data for individual stud lines exported from AutoCAD
+        public class StudLineData
+        {
+            public string lineType {get; set;}
+            public string layer { get; set; }
+            public bool angled { get; set; }
+            public string direction { get; set; }
+            public float area { get; set; }
+            public float length { get; set; }
+            public float Xstart { get; set; }
+            public float Xend { get; set; }
+            public float Ystart { get; set; }
+            public float Yend { get; set; }
+            public float slope { get; set; }
+            public float Yintercept { get; set; }
+            public int level { get; set; }
+        }
 
         // StudDesign() -- Begins initial Stud Design from Data.
         public string StudDesign()
@@ -106,10 +123,112 @@ namespace SCAD
             }
 
             // Create local arrDataSort[] array from form values
-            object[] arrDataSort = new object[61];
-            arrDataSort = StudForm.arrDataSort;
+            object[] arrRawData = new object[61];
+            arrRawData = StudForm.arrDataSort;
+
+            // Pass design parameter data array to sorting routine
+            this.DataSort(arrRawData);
             
             return "Now back to SCADRibbon.";
+        }
+
+        // DataSort() -- Sorts Raw data from AutoCAD export file so it is ready for Horizontal and Vertical matching
+        public void DataSort(object[] arrRawData)
+        {
+            /* DataSort() -- called by StudDesign() after design parameters have been passed
+             * from StudForm into arrRawData[] array. This routine then parses the AutoCAD
+             * excel data file and sorts it into appropriate line type arrays (Stud Walls, Loads, etc). */
+
+            // Declarations for arrays to hold sorted, unsorted, and line types.
+            List<StudLineData> arrSorted = new List<StudLineData>();
+            List<StudLineData> arrStud = new List<StudLineData>();
+            List<StudLineData> arrTruss = new List<StudLineData>();
+            List<StudLineData> arrDiaphr = new List<StudLineData>();
+            List<StudLineData> arrGap = new List<StudLineData>();
+            List<StudLineData> arrShear = new List<StudLineData>();
+            List<StudLineData> arrBeam = new List<StudLineData>();
+            
+            // Declarations for counters and sorting threshold constants
+            int j, k, L, M, N, O = new int();
+            float fReSort = new float();
+            const int iStraight = 5;        // Straight line threshold
+            const int iTruncate = 2;        // Number of decimal places to truncate from raw data
+
+            // Deactivate Screen Updating while sorting
+            this.Application.ScreenUpdating = false;
+
+            // Select Raw Data and begin assigning it to arrNotSorted, a list of the StudLineData class
+            Excel.Worksheet wsRawData = Application.Worksheets.get_Item("Sheet1");
+            int iColCount = wsRawData.UsedRange.Columns.Value + 9;
+            int iRowCount = wsRawData.UsedRange.Rows.Value - 1;
+            List<StudLineData> arrNotSorted = new List<StudLineData>();
+            for (int i = 1; i < iRowCount; i++)
+            {
+                arrNotSorted.Add(new StudLineData()
+                {
+                    lineType = wsRawData.get_Range("B" + (1 + i)).Text,
+                    layer = wsRawData.get_Range("C" + (1 + i)).Text,
+                    area = wsRawData.get_Range("D" + (1 + i)).Value,
+                    length = wsRawData.get_Range("E" + (1 + i)).Value,
+                    Xstart = wsRawData.get_Range("G" + (1 + i)).Value,
+                    Xend = wsRawData.get_Range("I" + (1 + i)).Value,
+                    Ystart = wsRawData.get_Range("H" + (1 + i)).Value,
+                    Yend = wsRawData.get_Range("J" + (1 + i)).Value
+                });
+            }
+            
+
+            // Open the Stud Design template from the share drive
+            Excel.Workbook wbStudDesign = this.Application.Workbooks.Add(@"\\Fs1\ENGUSERS\DESIGN\SCAD Programs\Stud Program\Stud Templates\Stud_Design.xltm");
+
+            // Initialize the Progress Bar while sorting routines take place
+            SCAD.ProgressBarSort ProgressBar = new ProgressBarSort();
+            ProgressBar.Show();
+
+            // Begin looping through arrNotSorted array to find: Angled Lines, Y vs X direction Lines, Slope, and re-arrange non-dominate coordinates
+            // such that start coordinate is smaller than end coordinate.
+            for (int i = 1; i < iRowCount; i++)
+            {
+                // Check for angled wall: If differences in both X/Y directions exceed iStraight threshold, declare angled
+                if ((Math.Abs(arrNotSorted[i].Xstart) - Math.Abs(arrNotSorted[i].Xend)) > iStraight && (Math.Abs(arrNotSorted[i].Ystart) - Math.Abs(arrNotSorted[i].Yend)) > iStraight)
+                {
+                    arrNotSorted[i].angled = true;
+
+                    // Re-sort so Start/End coordinates are in dominate order
+                    if (arrNotSorted[i].Xend < arrNotSorted[i].Xstart)
+                    {
+                        fReSort = arrNotSorted[i].Xend;
+                        arrNotSorted[i].Xend = arrNotSorted[i].Xstart;
+                        arrNotSorted[i].Xstart = fReSort;
+
+                        fReSort = arrNotSorted[i].Yend;
+                        arrNotSorted[i].Yend = arrNotSorted[i].Ystart;
+                        arrNotSorted[i].Ystart = fReSort;
+                    }
+                }
+                
+                // Assign false value for angled if line falls within iStraight threshold
+                else
+                {
+                    arrNotSorted[i].angled = false;
+                }
+
+                // Re-sort so that X/Y Start/End coords are in dominate order
+                if (arrNotSorted[i].Xend < arrNotSorted[i].Xstart)
+                {
+                    fReSort = arrNotSorted[i].Xend;
+                    arrNotSorted[i].Xend = arrNotSorted[i].Xstart;
+                    arrNotSorted[i].Xstart = fReSort;
+                }
+                if (arrNotSorted[i].Yend < arrNotSorted[i].Ystart)
+                {
+                    fReSort = arrNotSorted[i].Yend;
+                    arrNotSorted[i].Yend = arrNotSorted[i].Ystart;
+                    arrNotSorted[i].Ystart = fReSort;
+                }
+            }
+
+            return;
         }
 
         // StudExport() -- Creates an AutoCAD script file of Stud Design.
