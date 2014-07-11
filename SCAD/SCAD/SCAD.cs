@@ -93,13 +93,12 @@ namespace SCAD
             public string lineType {get; set;}
             public string layer { get; set; }
             public bool angled { get; set; }
-            public string direction { get; set; }
-            public float area { get; set; }
-            public float length { get; set; }
-            public float Xstart { get; set; }
-            public float Xend { get; set; }
-            public float Ystart { get; set; }
-            public float Yend { get; set; }
+            public char direction { get; set; }
+            public double length { get; set; }
+            public double Xstart { get; set; }
+            public double Xend { get; set; }
+            public double Ystart { get; set; }
+            public double Yend { get; set; }
             public float slope { get; set; }
             public float Yintercept { get; set; }
             public int level { get; set; }
@@ -135,99 +134,166 @@ namespace SCAD
         // DataSort() -- Sorts Raw data from AutoCAD export file so it is ready for Horizontal and Vertical matching
         public void DataSort(object[] arrRawData)
         {
-            /* DataSort() -- called by StudDesign() after design parameters have been passed
-             * from StudForm into arrRawData[] array. This routine then parses the AutoCAD
-             * excel data file and sorts it into appropriate line type arrays (Stud Walls, Loads, etc). */
-
-            // Declarations for arrays to hold sorted, unsorted, and line types.
-            List<StudLineData> arrSorted = new List<StudLineData>();
-            List<StudLineData> arrStud = new List<StudLineData>();
-            List<StudLineData> arrTruss = new List<StudLineData>();
-            List<StudLineData> arrDiaphr = new List<StudLineData>();
-            List<StudLineData> arrGap = new List<StudLineData>();
-            List<StudLineData> arrShear = new List<StudLineData>();
-            List<StudLineData> arrBeam = new List<StudLineData>();
-            
-            // Declarations for counters and sorting threshold constants
-            int j, k, L, M, N, O = new int();
-            float fReSort = new float();
-            const int iStraight = 5;        // Straight line threshold
-            const int iTruncate = 2;        // Number of decimal places to truncate from raw data
-
-            // Deactivate Screen Updating while sorting
-            this.Application.ScreenUpdating = false;
-
-            // Select Raw Data and begin assigning it to arrNotSorted, a list of the StudLineData class
-            Excel.Worksheet wsRawData = Application.Worksheets.get_Item("Sheet1");
-            int iColCount = wsRawData.UsedRange.Columns.Value + 9;
-            int iRowCount = wsRawData.UsedRange.Rows.Value - 1;
-            List<StudLineData> arrNotSorted = new List<StudLineData>();
-            for (int i = 1; i < iRowCount; i++)
+            try
             {
-                arrNotSorted.Add(new StudLineData()
+                /* DataSort() -- called by StudDesign() after design parameters have been passed
+                 * from StudForm into arrRawData[] array. This routine then parses the AutoCAD
+                 * excel data file and sorts it into appropriate line type arrays (Stud Walls, Loads, etc). */
+
+                // Declarations for arrays to hold sorted, unsorted, and line types.
+                //List<StudLineData> arrSorted = new List<StudLineData>();
+                List<StudLineData> arrNotSorted = new List<StudLineData>();
+                List<StudLineData> arrStud = new List<StudLineData>();
+                List<StudLineData> arrTruss = new List<StudLineData>();
+                List<StudLineData> arrDiaphr = new List<StudLineData>();
+                List<StudLineData> arrGap = new List<StudLineData>();
+                List<StudLineData> arrShear = new List<StudLineData>();
+                List<StudLineData> arrBeam = new List<StudLineData>();
+
+                // Declarations for counters and sorting threshold constants
+                double dblReSort = new double();        // Temporary resorting container for coordinates
+                int iLevel = new int();                 // Stores current working level for sorting
+                const int iStraight = 5;                // Straight line threshold
+                const int iTruncate = 2;                // Number of decimal places to truncate from raw data
+
+                // Deactivate Screen Updating while sorting
+                this.Application.ScreenUpdating = false;
+
+                // Select Raw Data and begin assigning it to arrNotSorted, a list of the StudLineData class
+                Excel.Worksheet wsRawData = Application.Worksheets.get_Item("Sheet1");
+                int iColCount = wsRawData.UsedRange.Columns.Count + 9;
+                int iRowCount = wsRawData.UsedRange.Rows.Count - 1;
+                for (int i = 0; i < iRowCount; i++)
                 {
-                    lineType = wsRawData.get_Range("B" + (1 + i)).Text,
-                    layer = wsRawData.get_Range("C" + (1 + i)).Text,
-                    area = wsRawData.get_Range("D" + (1 + i)).Value,
-                    length = wsRawData.get_Range("E" + (1 + i)).Value,
-                    Xstart = wsRawData.get_Range("G" + (1 + i)).Value,
-                    Xend = wsRawData.get_Range("I" + (1 + i)).Value,
-                    Ystart = wsRawData.get_Range("H" + (1 + i)).Value,
-                    Yend = wsRawData.get_Range("J" + (1 + i)).Value
-                });
-            }
-            
-
-            // Open the Stud Design template from the share drive
-            Excel.Workbook wbStudDesign = this.Application.Workbooks.Add(@"\\Fs1\ENGUSERS\DESIGN\SCAD Programs\Stud Program\Stud Templates\Stud_Design.xltm");
-
-            // Initialize the Progress Bar while sorting routines take place
-            SCAD.ProgressBarSort ProgressBar = new ProgressBarSort();
-            ProgressBar.Show();
-
-            // Begin looping through arrNotSorted array to find: Angled Lines, Y vs X direction Lines, Slope, and re-arrange non-dominate coordinates
-            // such that start coordinate is smaller than end coordinate.
-            for (int i = 1; i < iRowCount; i++)
-            {
-                // Check for angled wall: If differences in both X/Y directions exceed iStraight threshold, declare angled
-                if ((Math.Abs(arrNotSorted[i].Xstart) - Math.Abs(arrNotSorted[i].Xend)) > iStraight && (Math.Abs(arrNotSorted[i].Ystart) - Math.Abs(arrNotSorted[i].Yend)) > iStraight)
-                {
-                    arrNotSorted[i].angled = true;
-
-                    // Re-sort so Start/End coordinates are in dominate order
-                    if (arrNotSorted[i].Xend < arrNotSorted[i].Xstart)
+                    arrNotSorted.Add(new StudLineData()
                     {
-                        fReSort = arrNotSorted[i].Xend;
-                        arrNotSorted[i].Xend = arrNotSorted[i].Xstart;
-                        arrNotSorted[i].Xstart = fReSort;
+                        lineType = wsRawData.get_Range("B" + (2 + i)).Text,
+                        layer = wsRawData.get_Range("C" + (2 + i)).Text,
+                        length = wsRawData.get_Range("E" + (2 + i)).Value,
+                        Xstart = wsRawData.get_Range("G" + (2 + i)).Value,
+                        Xend = wsRawData.get_Range("I" + (2 + i)).Value,
+                        Ystart = wsRawData.get_Range("H" + (2 + i)).Value,
+                        Yend = wsRawData.get_Range("J" + (2 + i)).Value
+                    });
+                }
 
-                        fReSort = arrNotSorted[i].Yend;
-                        arrNotSorted[i].Yend = arrNotSorted[i].Ystart;
-                        arrNotSorted[i].Ystart = fReSort;
+                // Open the Stud Design template from the share drive
+                Excel.Workbook wbStudDesign = this.Application.Workbooks.Add(@"\\Fs1\ENGUSERS\DESIGN\SCAD Programs\Stud Program\Stud Templates\Stud_Design.xltm");
+
+                /************ CATEGORIZATION OF DIRECTION/SLOPE/DOMINANT COORDS ************
+                 * Begin looping through arrNotSorted array to find: Angled Lines, Y vs X direction Lines, Slope, and re-arrange non-dominate coordinates
+                 * such that start coordinate is smaller than end coordinate.*/
+                foreach (StudLineData lineNotSorted in arrNotSorted)
+                {
+                    // Check for angled wall: If differences in both X/Y directions exceed iStraight threshold, declare angled
+                    if ((Math.Abs(lineNotSorted.Xstart - lineNotSorted.Xend)) > iStraight && (Math.Abs(lineNotSorted.Ystart - lineNotSorted.Yend)) > iStraight)
+                    {
+                        lineNotSorted.angled = true;
+                        lineNotSorted.direction = 'A';
+
+                        // Re-sort so Start/End coordinates are in dominate order
+                        if (lineNotSorted.Xend < lineNotSorted.Xstart)
+                        {
+                            dblReSort = lineNotSorted.Xend;
+                            lineNotSorted.Xend = lineNotSorted.Xstart;
+                            lineNotSorted.Xstart = dblReSort;
+
+                            dblReSort = lineNotSorted.Yend;
+                            lineNotSorted.Yend = lineNotSorted.Ystart;
+                            lineNotSorted.Ystart = dblReSort;
+                        }
+                    }
+
+                    // Assign false value for angled if line falls within iStraight threshold
+                    else
+                    {
+                        lineNotSorted.angled = false;
+                    }
+
+                    // Re-sort so that X/Y Start/End coords are in dominate order
+                    if (lineNotSorted.Xend < lineNotSorted.Xstart)
+                    {
+                        dblReSort = lineNotSorted.Xend;
+                        lineNotSorted.Xend = lineNotSorted.Xstart;
+                        lineNotSorted.Xstart = dblReSort;
+                    }
+                    if (lineNotSorted.Yend < lineNotSorted.Ystart)
+                    {
+                        dblReSort = lineNotSorted.Yend;
+                        lineNotSorted.Yend = lineNotSorted.Ystart;
+                        lineNotSorted.Ystart = dblReSort;
+                    }
+
+                    // Determine line direction for straight lines
+                    if (lineNotSorted.angled == false)
+                    {
+                        // Check if Y direction line (if X coords are within straight tolerance)
+                        if ((lineNotSorted.Xend - lineNotSorted.Xstart) <= iStraight)
+                        {
+                            lineNotSorted.direction = 'Y';
+                        }
+
+                        // Else, since line is straight, assign direction as X, slope as zero, Y intercept as Start Y coordinate
+                        else
+                        {
+                            lineNotSorted.direction = 'X';
+                            lineNotSorted.slope = 0;
+                            lineNotSorted.Yintercept = (float)lineNotSorted.Ystart;
+                        }
+                    }
+
+                    // If line is angled, find slope, Y-intercept and assign dominant direction (based on slope)
+                    if (lineNotSorted.angled == true)
+                    {
+                        // Determine slope
+                        lineNotSorted.slope = ((float)lineNotSorted.Yend - (float)lineNotSorted.Ystart) / ((float)lineNotSorted.Xend - (float)lineNotSorted.Xstart);
+
+                        // Determine Y-intercept
+                        lineNotSorted.Yintercept = (float)lineNotSorted.Xstart * (float)lineNotSorted.slope;
+                        lineNotSorted.Yintercept = (float)lineNotSorted.Yend - (float)lineNotSorted.Yintercept;
                     }
                 }
-                
-                // Assign false value for angled if line falls within iStraight threshold
-                else
+
+                /************ SORTING BY Y COORDINATES ************/
+                // Sort data from arrNotSorted into arrSorted, from smallest to largest Y end coord
+                List<StudLineData> arrSorted = arrNotSorted.OrderBy(o => o.Yend).ToList();
+
+                /************ IDENTIFY LEVELS BASED ON DIAPHRAGM LINES ************/
+                iLevel = 0;
+                // Identify Diaphragm Lines and assign level
+                foreach (StudLineData lineSorted in arrSorted)
                 {
-                    arrNotSorted[i].angled = false;
+                    if (lineSorted.layer == "ENG_DIAPHR" && lineSorted.direction == 'Y')
+                    {
+                        iLevel++;
+                        lineSorted.level = iLevel;
+                    }
                 }
 
-                // Re-sort so that X/Y Start/End coords are in dominate order
-                if (arrNotSorted[i].Xend < arrNotSorted[i].Xstart)
+                // Loop through arrSorted and apply level to each line based on Y-Coords of Diaphragm lines
+                foreach (StudLineData diaphrElement in arrSorted)
                 {
-                    fReSort = arrNotSorted[i].Xend;
-                    arrNotSorted[i].Xend = arrNotSorted[i].Xstart;
-                    arrNotSorted[i].Xstart = fReSort;
+                    // Find diaphragm lines
+                    if (diaphrElement.layer == "ENG_DIAPR" && diaphrElement.direction == 'Y')                           
+                    {
+                        foreach (StudLineData subElement in arrSorted)
+                        {
+                            // Match stud lines with diaphragm lines. Assign same level as diaphragm if falls between.
+                            if (subElement.Ystart >= diaphrElement.Ystart && subElement.Yend <= diaphrElement.Yend)     
+                            {
+                                subElement.level = diaphrElement.level;                                                 
+                            }
+                        }
+                    }
                 }
-                if (arrNotSorted[i].Yend < arrNotSorted[i].Ystart)
-                {
-                    fReSort = arrNotSorted[i].Yend;
-                    arrNotSorted[i].Yend = arrNotSorted[i].Ystart;
-                    arrNotSorted[i].Ystart = fReSort;
-                }
+
+                /************ SUB DIVIDE INTO LINE TYPES LISTS ************/
+                // Determine number of lines in each layer/type
+
+                // Reactivate Screen Updating after sorting
+                this.Application.ScreenUpdating = true;
             }
-
+            catch (Exception e) { MessageBox.Show(e.Message); }
             return;
         }
 
