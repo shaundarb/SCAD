@@ -45,7 +45,7 @@ namespace SCAD
          *      - Optimizations and Enchancements                   *
          *      - Changed Lateral Reports from printing to PDF      *
          *          creation                                        *
-         *      -                                                   
+         *      -                                                   *
          ************************************************************/
 
 
@@ -86,11 +86,10 @@ namespace SCAD
             return;
         }
 
-        /******************** STUD DESIGN methods *******************/
-        // StudLineData -- Class that caters to all the data for individual stud lines exported from AutoCAD
+        // RawLineData -- Class that caters to all the data for individual stud lines exported from AutoCAD
         public class RawLineData
         {
-            public string lineType {get; set;}
+            public string label { get; set; }
             public string layer { get; set; }
             public bool angled { get; set; }
             public char direction { get; set; }
@@ -104,7 +103,12 @@ namespace SCAD
             public float startGapLength { get; set; }
             public float endGapLength { get; set; }
             public int level { get; set; }
+            public char studClass { get; set; }         // Designates Interior/Exterior
+            public int studThickness { get; set; }
+
         }
+
+        /******************** STUD DESIGN methods *******************/
 
         // StudDesign() -- Begins initial Stud Design from Data.
         public string StudDesign()
@@ -169,7 +173,6 @@ namespace SCAD
                 {
                     arrNotSorted.Add(new RawLineData()
                     {
-                        lineType = wsRawData.get_Range("B" + (2 + i)).Text,
                         layer = wsRawData.get_Range("C" + (2 + i)).Text,
                         length = (float)wsRawData.get_Range("E" + (2 + i)).Value,
                         Xstart = (float)wsRawData.get_Range("G" + (2 + i)).Value,
@@ -298,7 +301,6 @@ namespace SCAD
                     {
                         arrGap.Add(new RawLineData()
                         {
-                            lineType = element.lineType,
                             layer = element.layer,
                             angled = element.angled,
                             direction = element.direction,
@@ -318,7 +320,6 @@ namespace SCAD
                     {
                         arrDiaphr.Add(new RawLineData()
                         {
-                            lineType = element.lineType,
                             layer = element.layer,
                             angled = element.angled,
                             direction = element.direction,
@@ -338,7 +339,6 @@ namespace SCAD
                     {
                         arrShear.Add(new RawLineData()
                         {
-                            lineType = element.lineType,
                             layer = element.layer,
                             angled = element.angled,
                             direction = element.direction,
@@ -358,7 +358,6 @@ namespace SCAD
                     {
                         arrTruss.Add(new RawLineData()
                         {
-                            lineType = element.lineType,
                             layer = element.layer,
                             angled = element.angled,
                             direction = element.direction,
@@ -378,7 +377,6 @@ namespace SCAD
                     {
                         arrStud.Add(new RawLineData()
                         {
-                            lineType = element.lineType,
                             layer = element.layer,
                             angled = element.angled,
                             direction = element.direction,
@@ -398,7 +396,6 @@ namespace SCAD
                     {
                         arrBeam.Add(new RawLineData()
                         {
-                            lineType = element.lineType,
                             layer = element.layer,
                             angled = element.angled,
                             direction = element.direction,
@@ -423,8 +420,8 @@ namespace SCAD
                     {
                         if (diaphrElement.level == gapElement.level)
                         {
-                            diaphrElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - diaphrElement.Xstart),2) + Math.Pow((gapElement.Xend - diaphrElement.Xend), 2)),.5);
-                            diaphrElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - diaphrElement.Ystart), 2) + Math.Pow((gapElement.Xend - diaphrElement.Yend), 2)), .5);
+                            diaphrElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - diaphrElement.Xstart), 2) + Math.Pow((gapElement.Ystart - diaphrElement.Ystart), 2)), .5);
+                            diaphrElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - diaphrElement.Xend), 2) + Math.Pow((gapElement.Ystart - diaphrElement.Yend), 2)), .5);
                         }
                     }
 
@@ -433,8 +430,8 @@ namespace SCAD
                     {
                         if (shearElement.level == gapElement.level)
                         {
-                            shearElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - shearElement.Xstart), 2) + Math.Pow((gapElement.Xend - shearElement.Xend), 2)), .5);
-                            shearElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - shearElement.Ystart), 2) + Math.Pow((gapElement.Xend - shearElement.Yend), 2)), .5);
+                            shearElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - shearElement.Xstart), 2) + Math.Pow((gapElement.Ystart - shearElement.Ystart), 2)), .5);
+                            shearElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - shearElement.Xend), 2) + Math.Pow((gapElement.Ystart - shearElement.Yend), 2)), .5);
                         }
                     }
 
@@ -443,8 +440,8 @@ namespace SCAD
                     {
                         if (trussElement.level == gapElement.level)
                         {
-                            trussElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - trussElement.Xstart), 2) + Math.Pow((gapElement.Xend - trussElement.Xend), 2)), .5);
-                            trussElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - trussElement.Ystart), 2) + Math.Pow((gapElement.Xend - trussElement.Yend), 2)), .5);
+                            trussElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - trussElement.Xstart), 2) + Math.Pow((gapElement.Ystart - trussElement.Ystart), 2)), .5);
+                            trussElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - trussElement.Xend), 2) + Math.Pow((gapElement.Ystart - trussElement.Yend), 2)), .5);
                         }
                     }
 
@@ -453,8 +450,8 @@ namespace SCAD
                     {
                         if (studElement.level == gapElement.level)
                         {
-                            studElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - studElement.Xstart), 2) + Math.Pow((gapElement.Xend - studElement.Xend), 2)), .5);
-                            studElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - studElement.Ystart), 2) + Math.Pow((gapElement.Xend - studElement.Yend), 2)), .5);
+                            studElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - studElement.Xstart), 2) + Math.Pow((gapElement.Ystart - studElement.Ystart), 2)), .5);
+                            studElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - studElement.Xend), 2) + Math.Pow((gapElement.Ystart - studElement.Yend), 2)), .5);
                         }
                     }
 
@@ -463,14 +460,148 @@ namespace SCAD
                     {
                         if (beamElement.level == gapElement.level)
                         {
-                            beamElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - beamElement.Xstart), 2) + Math.Pow((gapElement.Xend - beamElement.Xend), 2)), .5);
-                            beamElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - beamElement.Ystart), 2) + Math.Pow((gapElement.Xend - beamElement.Yend), 2)), .5);
+                            beamElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - beamElement.Xstart), 2) + Math.Pow((gapElement.Ystart - beamElement.Ystart), 2)), .5);
+                            beamElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - beamElement.Xend), 2) + Math.Pow((gapElement.Ystart - beamElement.Yend), 2)), .5);
                         }
                     }
                 }
 
                 /************ CREATE NEW LABELS FOR LINE DATA ************/
+                // Cycle through each level in order to generate new labels based on SCA standard (i.e. X/Y-START_LINE-TYPE_LEVEL_NUMBER)
+                for (int level = 1; level <= iLevel; level++ )
+                {
+                    // Cycle through each gap line to apply new label determined by direction and level
+                    int j = 1;              // Counters used to indicate line number in particular direction
+                    int k = 1;
+                    int m = 1;            
+                    foreach (RawLineData gapElement in arrGap)
+                    {
+                        if (gapElement.direction == 'X' && gapElement.level == level)
+                        {
+                            gapElement.label = "X_" + Math.Round(gapElement.Xstart,2) + "_G_" + level + "_" + j;
+                            j++;
+                        }
+                        if (gapElement.direction == 'Y' && gapElement.level == level)
+                        {
+                            gapElement.label = "Y_" + Math.Round(gapElement.Ystart, 2) + "_G_" + level + "_" + k;
+                            k++;
+                        }
+                        if (gapElement.direction == 'X' && gapElement.level == level)
+                        {
+                            gapElement.label = "A_" + Math.Round(gapElement.Ystart, 2) + "_G_" + level + "_" + m;
+                            m++;
+                        }
+                    }
 
+                    // Cycle through each diaphragm line to apply new label determined by direction and level
+                    j = 1;              // Counters used to indicate line number in particular direction
+                    k = 1;
+                    m = 1;
+                    foreach (RawLineData diaphrElement in arrDiaphr)
+                    {
+                        if (diaphrElement.direction == 'X' && diaphrElement.level == level)
+                        {
+                            diaphrElement.label = "X_" + Math.Round(diaphrElement.Xstart, 2) + "_D_" + level + "_" + j;
+                            j++;
+                        }
+                        if (diaphrElement.direction == 'Y' && diaphrElement.level == level)
+                        {
+                            diaphrElement.label = "Y_" + Math.Round(diaphrElement.Ystart, 2) + "_D_" + level + "_" + k;
+                            k++;
+                        }
+                        if (diaphrElement.direction == 'X' && diaphrElement.level == level)
+                        {
+                            diaphrElement.label = "A_" + Math.Round(diaphrElement.Ystart, 2) + "_D_" + level + "_" + m;
+                            m++;
+                        }
+                    }
+
+                    // Cycle through each truss line to apply new label determined by direction and level and truss type
+                    j = 1;              // Counters used to indicate line number in particular direction
+                    k = 1;
+                    m = 1;
+                    foreach (RawLineData trussElement in arrTruss)
+                    {
+                        if (trussElement.direction == 'X' && trussElement.level == level)
+                        {
+                            switch (trussElement.layer)
+                            {
+                                case "ENG_TRUSS_BALC" :
+                                    trussElement.label = "X_TB_" + Math.Round(trussElement.Xstart, 2) + "_" + level + "_" + j;
+                                    j++;
+                                    continue;
+                                case "ENG_TRUSS_CORR" :
+                                    trussElement.label = "X_TC_" + Math.Round(trussElement.Xstart, 2) + "_" + level + "_" + j;
+                                    j++;
+                                    continue;
+                                case "ENG_TRUSS_ROOF" :
+                                    trussElement.label = "X_TR_" + Math.Round(trussElement.Xstart, 2) + "_" + level + "_" + j;
+                                    j++;
+                                    continue;
+                                case "ENG_TRUSS_UNIT" :
+                                    trussElement.label = "X_TU_" + Math.Round(trussElement.Xstart, 2) + "_" + level + "_" + j;
+                                    j++;
+                                    continue;
+                                default :
+                                    trussElement.label = "X_TO_" + Math.Round(trussElement.Xstart, 2) + "_" + level + "_" + j;
+                                    j++;
+                                    continue;
+                            }
+                        }
+                        if (trussElement.direction == 'Y' && trussElement.level == level)
+                        {
+                            switch (trussElement.layer)
+                            {
+                                case "ENG_TRUSS_BALC":
+                                    trussElement.label = "Y_TB_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + k;
+                                    k++;
+                                    continue;
+                                case "ENG_TRUSS_CORR":
+                                    trussElement.label = "Y_TC_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + k;
+                                    k++;
+                                    continue;
+                                case "ENG_TRUSS_ROOF":
+                                    trussElement.label = "Y_TR_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + k;
+                                    k++;
+                                    continue;
+                                case "ENG_TRUSS_UNIT":
+                                    trussElement.label = "Y_TU_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + k;
+                                    k++;
+                                    continue;
+                                default:
+                                    trussElement.label = "Y_TO_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + k;
+                                    k++;
+                                    continue;
+                            }
+                        }
+                        if (trussElement.direction == 'A' && trussElement.level == level)
+                        {
+                            switch (trussElement.layer)
+                            {
+                                case "ENG_TRUSS_BALC":
+                                    trussElement.label = "Y_TB_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + m;
+                                    m++;
+                                    continue;
+                                case "ENG_TRUSS_CORR":
+                                    trussElement.label = "Y_TC_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + m;
+                                    m++;
+                                    continue;
+                                case "ENG_TRUSS_ROOF":
+                                    trussElement.label = "Y_TR_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + m;
+                                    m++;
+                                    continue;
+                                case "ENG_TRUSS_UNIT":
+                                    trussElement.label = "Y_TU_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + m;
+                                    m++;
+                                    continue;
+                                default:
+                                    trussElement.label = "Y_TO_" + Math.Round(trussElement.Ystart, 2) + "_" + level + "_" + m;
+                                    m++;
+                                    continue;
+                            }
+                        }
+                    }
+                }
 
                 // Reactivate Screen Updating after sorting
                 this.Application.ScreenUpdating = true;
