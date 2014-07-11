@@ -88,19 +88,21 @@ namespace SCAD
 
         /******************** STUD DESIGN methods *******************/
         // StudLineData -- Class that caters to all the data for individual stud lines exported from AutoCAD
-        public class StudLineData
+        public class RawLineData
         {
             public string lineType {get; set;}
             public string layer { get; set; }
             public bool angled { get; set; }
             public char direction { get; set; }
-            public double length { get; set; }
-            public double Xstart { get; set; }
-            public double Xend { get; set; }
-            public double Ystart { get; set; }
-            public double Yend { get; set; }
+            public float length { get; set; }
+            public float Xstart { get; set; }
+            public float Xend { get; set; }
+            public float Ystart { get; set; }
+            public float Yend { get; set; }
             public float slope { get; set; }
             public float Yintercept { get; set; }
+            public float startGapLength { get; set; }
+            public float endGapLength { get; set; }
             public int level { get; set; }
         }
 
@@ -142,16 +144,16 @@ namespace SCAD
 
                 // Declarations for arrays to hold sorted, unsorted, and line types.
                 //List<StudLineData> arrSorted = new List<StudLineData>();
-                List<StudLineData> arrNotSorted = new List<StudLineData>();
-                List<StudLineData> arrStud = new List<StudLineData>();
-                List<StudLineData> arrTruss = new List<StudLineData>();
-                List<StudLineData> arrDiaphr = new List<StudLineData>();
-                List<StudLineData> arrGap = new List<StudLineData>();
-                List<StudLineData> arrShear = new List<StudLineData>();
-                List<StudLineData> arrBeam = new List<StudLineData>();
+                List<RawLineData> arrNotSorted = new List<RawLineData>();
+                List<RawLineData> arrStud = new List<RawLineData>();
+                List<RawLineData> arrTruss = new List<RawLineData>();
+                List<RawLineData> arrDiaphr = new List<RawLineData>();
+                List<RawLineData> arrGap = new List<RawLineData>();
+                List<RawLineData> arrShear = new List<RawLineData>();
+                List<RawLineData> arrBeam = new List<RawLineData>();
 
                 // Declarations for counters and sorting threshold constants
-                double dblReSort = new double();        // Temporary resorting container for coordinates
+                float fReSort = new float();        // Temporary resorting container for coordinates
                 int iLevel = new int();                 // Stores current working level for sorting
                 const int iStraight = 5;                // Straight line threshold
                 const int iTruncate = 2;                // Number of decimal places to truncate from raw data
@@ -165,15 +167,15 @@ namespace SCAD
                 int iRowCount = wsRawData.UsedRange.Rows.Count - 1;
                 for (int i = 0; i < iRowCount; i++)
                 {
-                    arrNotSorted.Add(new StudLineData()
+                    arrNotSorted.Add(new RawLineData()
                     {
                         lineType = wsRawData.get_Range("B" + (2 + i)).Text,
                         layer = wsRawData.get_Range("C" + (2 + i)).Text,
-                        length = wsRawData.get_Range("E" + (2 + i)).Value,
-                        Xstart = wsRawData.get_Range("G" + (2 + i)).Value,
-                        Xend = wsRawData.get_Range("I" + (2 + i)).Value,
-                        Ystart = wsRawData.get_Range("H" + (2 + i)).Value,
-                        Yend = wsRawData.get_Range("J" + (2 + i)).Value
+                        length = (float)wsRawData.get_Range("E" + (2 + i)).Value,
+                        Xstart = (float)wsRawData.get_Range("G" + (2 + i)).Value,
+                        Xend = (float)wsRawData.get_Range("I" + (2 + i)).Value,
+                        Ystart = (float)wsRawData.get_Range("H" + (2 + i)).Value,
+                        Yend = (float)wsRawData.get_Range("J" + (2 + i)).Value
                     });
                 }
 
@@ -183,7 +185,7 @@ namespace SCAD
                 /************ CATEGORIZATION OF DIRECTION/SLOPE/DOMINANT COORDS ************
                  * Begin looping through arrNotSorted array to find: Angled Lines, Y vs X direction Lines, Slope, and re-arrange non-dominate coordinates
                  * such that start coordinate is smaller than end coordinate.*/
-                foreach (StudLineData lineNotSorted in arrNotSorted)
+                foreach (RawLineData lineNotSorted in arrNotSorted)
                 {
                     // Check for angled wall: If differences in both X/Y directions exceed iStraight threshold, declare angled
                     if ((Math.Abs(lineNotSorted.Xstart - lineNotSorted.Xend)) > iStraight && (Math.Abs(lineNotSorted.Ystart - lineNotSorted.Yend)) > iStraight)
@@ -194,13 +196,13 @@ namespace SCAD
                         // Re-sort so Start/End coordinates are in dominate order
                         if (lineNotSorted.Xend < lineNotSorted.Xstart)
                         {
-                            dblReSort = lineNotSorted.Xend;
+                            fReSort = lineNotSorted.Xend;
                             lineNotSorted.Xend = lineNotSorted.Xstart;
-                            lineNotSorted.Xstart = dblReSort;
+                            lineNotSorted.Xstart = fReSort;
 
-                            dblReSort = lineNotSorted.Yend;
+                            fReSort = lineNotSorted.Yend;
                             lineNotSorted.Yend = lineNotSorted.Ystart;
-                            lineNotSorted.Ystart = dblReSort;
+                            lineNotSorted.Ystart = fReSort;
                         }
                     }
 
@@ -213,15 +215,15 @@ namespace SCAD
                     // Re-sort so that X/Y Start/End coords are in dominate order
                     if (lineNotSorted.Xend < lineNotSorted.Xstart)
                     {
-                        dblReSort = lineNotSorted.Xend;
+                        fReSort = lineNotSorted.Xend;
                         lineNotSorted.Xend = lineNotSorted.Xstart;
-                        lineNotSorted.Xstart = dblReSort;
+                        lineNotSorted.Xstart = fReSort;
                     }
                     if (lineNotSorted.Yend < lineNotSorted.Ystart)
                     {
-                        dblReSort = lineNotSorted.Yend;
+                        fReSort = lineNotSorted.Yend;
                         lineNotSorted.Yend = lineNotSorted.Ystart;
-                        lineNotSorted.Ystart = dblReSort;
+                        lineNotSorted.Ystart = fReSort;
                     }
 
                     // Determine line direction for straight lines
@@ -238,7 +240,7 @@ namespace SCAD
                         {
                             lineNotSorted.direction = 'X';
                             lineNotSorted.slope = 0;
-                            lineNotSorted.Yintercept = (float)lineNotSorted.Ystart;
+                            lineNotSorted.Yintercept = lineNotSorted.Ystart;
                         }
                     }
 
@@ -246,22 +248,22 @@ namespace SCAD
                     if (lineNotSorted.angled == true)
                     {
                         // Determine slope
-                        lineNotSorted.slope = ((float)lineNotSorted.Yend - (float)lineNotSorted.Ystart) / ((float)lineNotSorted.Xend - (float)lineNotSorted.Xstart);
+                        lineNotSorted.slope = (lineNotSorted.Yend - lineNotSorted.Ystart) / (lineNotSorted.Xend - lineNotSorted.Xstart);
 
                         // Determine Y-intercept
-                        lineNotSorted.Yintercept = (float)lineNotSorted.Xstart * (float)lineNotSorted.slope;
-                        lineNotSorted.Yintercept = (float)lineNotSorted.Yend - (float)lineNotSorted.Yintercept;
+                        lineNotSorted.Yintercept = lineNotSorted.Xstart * lineNotSorted.slope;
+                        lineNotSorted.Yintercept = lineNotSorted.Yend - lineNotSorted.Yintercept;
                     }
                 }
 
                 /************ SORTING BY Y COORDINATES ************/
                 // Sort data from arrNotSorted into arrSorted, from smallest to largest Y end coord
-                List<StudLineData> arrSorted = arrNotSorted.OrderBy(o => o.Yend).ToList();
+                List<RawLineData> arrSorted = arrNotSorted.OrderBy(o => o.Yend).ToList();
 
                 /************ IDENTIFY LEVELS BASED ON DIAPHRAGM LINES ************/
                 iLevel = 0;
                 // Identify Diaphragm Lines and assign level
-                foreach (StudLineData lineSorted in arrSorted)
+                foreach (RawLineData lineSorted in arrSorted)
                 {
                     if (lineSorted.layer == "ENG_DIAPHR" && lineSorted.direction == 'Y')
                     {
@@ -271,12 +273,12 @@ namespace SCAD
                 }
 
                 // Loop through arrSorted and apply level to each line based on Y-Coords of Diaphragm lines
-                foreach (StudLineData diaphrElement in arrSorted)
+                foreach (RawLineData diaphrElement in arrSorted)
                 {
                     // Find diaphragm lines
                     if (diaphrElement.layer == "ENG_DIAPR" && diaphrElement.direction == 'Y')                           
                     {
-                        foreach (StudLineData subElement in arrSorted)
+                        foreach (RawLineData subElement in arrSorted)
                         {
                             // Match stud lines with diaphragm lines. Assign same level as diaphragm if falls between.
                             if (subElement.Ystart >= diaphrElement.Ystart && subElement.Yend <= diaphrElement.Yend)     
@@ -288,7 +290,187 @@ namespace SCAD
                 }
 
                 /************ SUB DIVIDE INTO LINE TYPES LISTS ************/
-                // Determine number of lines in each layer/type
+                // Cycle through each line and Separate into different lists based on type/layer
+                foreach (RawLineData element in arrSorted)
+                {
+                    // Add element to arrGap list if Gap Line
+                    if (element.layer == "ENG_GAP")
+                    {
+                        arrGap.Add(new RawLineData()
+                        {
+                            lineType = element.lineType,
+                            layer = element.layer,
+                            angled = element.angled,
+                            direction = element.direction,
+                            length = element.length,
+                            Xstart = element.Xstart,
+                            Xend = element.Xend,
+                            Ystart = element.Ystart,
+                            Yend = element.Yend,
+                            slope = element.slope,
+                            Yintercept = element.Yintercept,
+                            level = element.level
+                        });
+                    }
+
+                    // Add element to arrDiaphr list if Diaphragm Line
+                    if (element.layer == "ENG_DIAPHR")
+                    {
+                        arrDiaphr.Add(new RawLineData()
+                        {
+                            lineType = element.lineType,
+                            layer = element.layer,
+                            angled = element.angled,
+                            direction = element.direction,
+                            length = element.length,
+                            Xstart = element.Xstart,
+                            Xend = element.Xend,
+                            Ystart = element.Ystart,
+                            Yend = element.Yend,
+                            slope = element.slope,
+                            Yintercept = element.Yintercept,
+                            level = element.level
+                        });
+                    }
+
+                    // Add element to arrShear list if Shear Line
+                    if (element.layer == "ENG_SHEAR")
+                    {
+                        arrShear.Add(new RawLineData()
+                        {
+                            lineType = element.lineType,
+                            layer = element.layer,
+                            angled = element.angled,
+                            direction = element.direction,
+                            length = element.length,
+                            Xstart = element.Xstart,
+                            Xend = element.Xend,
+                            Ystart = element.Ystart,
+                            Yend = element.Yend,
+                            slope = element.slope,
+                            Yintercept = element.Yintercept,
+                            level = element.level
+                        });
+                    }
+
+                    // Add element to arrTruss list if Truss Line
+                    if (element.layer == "ENG_TRUSS")
+                    {
+                        arrTruss.Add(new RawLineData()
+                        {
+                            lineType = element.lineType,
+                            layer = element.layer,
+                            angled = element.angled,
+                            direction = element.direction,
+                            length = element.length,
+                            Xstart = element.Xstart,
+                            Xend = element.Xend,
+                            Ystart = element.Ystart,
+                            Yend = element.Yend,
+                            slope = element.slope,
+                            Yintercept = element.Yintercept,
+                            level = element.level
+                        });
+                    }
+
+                    // Add element to arrStud list if Stud Line
+                    if (element.layer == "ENG_STUD")
+                    {
+                        arrStud.Add(new RawLineData()
+                        {
+                            lineType = element.lineType,
+                            layer = element.layer,
+                            angled = element.angled,
+                            direction = element.direction,
+                            length = element.length,
+                            Xstart = element.Xstart,
+                            Xend = element.Xend,
+                            Ystart = element.Ystart,
+                            Yend = element.Yend,
+                            slope = element.slope,
+                            Yintercept = element.Yintercept,
+                            level = element.level
+                        });
+                    }
+
+                    // Add element to arrBeam list if Beam Line
+                    if (element.layer == "ENG_BEAM")
+                    {
+                        arrBeam.Add(new RawLineData()
+                        {
+                            lineType = element.lineType,
+                            layer = element.layer,
+                            angled = element.angled,
+                            direction = element.direction,
+                            length = element.length,
+                            Xstart = element.Xstart,
+                            Xend = element.Xend,
+                            Ystart = element.Ystart,
+                            Yend = element.Yend,
+                            slope = element.slope,
+                            Yintercept = element.Yintercept,
+                            level = element.level
+                        });
+                    }
+                }
+
+                /************ DETERMINE GAP LENGTH FOR EACH LINE ************/
+                // Loop through each Gap Line
+                foreach (RawLineData gapElement in arrGap)
+                {
+                    // Match each gap line with Diaphragm line on same level, calculate gap lengths
+                    foreach (RawLineData diaphrElement in arrDiaphr)
+                    {
+                        if (diaphrElement.level == gapElement.level)
+                        {
+                            diaphrElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - diaphrElement.Xstart),2) + Math.Pow((gapElement.Xend - diaphrElement.Xend), 2)),.5);
+                            diaphrElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - diaphrElement.Ystart), 2) + Math.Pow((gapElement.Xend - diaphrElement.Yend), 2)), .5);
+                        }
+                    }
+
+                    // Match each gap line with Shear line on same level, calculate gap lengths
+                    foreach (RawLineData shearElement in arrShear)
+                    {
+                        if (shearElement.level == gapElement.level)
+                        {
+                            shearElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - shearElement.Xstart), 2) + Math.Pow((gapElement.Xend - shearElement.Xend), 2)), .5);
+                            shearElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - shearElement.Ystart), 2) + Math.Pow((gapElement.Xend - shearElement.Yend), 2)), .5);
+                        }
+                    }
+
+                    // Match each gap line with Truss line on same level, calculate gap lengths
+                    foreach (RawLineData trussElement in arrTruss)
+                    {
+                        if (trussElement.level == gapElement.level)
+                        {
+                            trussElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - trussElement.Xstart), 2) + Math.Pow((gapElement.Xend - trussElement.Xend), 2)), .5);
+                            trussElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - trussElement.Ystart), 2) + Math.Pow((gapElement.Xend - trussElement.Yend), 2)), .5);
+                        }
+                    }
+
+                    // Match each gap line with Stud line on same level, calculate gap lengths
+                    foreach (RawLineData studElement in arrStud)
+                    {
+                        if (studElement.level == gapElement.level)
+                        {
+                            studElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - studElement.Xstart), 2) + Math.Pow((gapElement.Xend - studElement.Xend), 2)), .5);
+                            studElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - studElement.Ystart), 2) + Math.Pow((gapElement.Xend - studElement.Yend), 2)), .5);
+                        }
+                    }
+
+                    // Match each gap line with Beam line on same level, calculate gap lengths
+                    foreach (RawLineData beamElement in arrBeam)
+                    {
+                        if (beamElement.level == gapElement.level)
+                        {
+                            beamElement.startGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - beamElement.Xstart), 2) + Math.Pow((gapElement.Xend - beamElement.Xend), 2)), .5);
+                            beamElement.endGapLength = (float)Math.Pow((Math.Pow((gapElement.Xstart - beamElement.Ystart), 2) + Math.Pow((gapElement.Xend - beamElement.Yend), 2)), .5);
+                        }
+                    }
+                }
+
+                /************ CREATE NEW LABELS FOR LINE DATA ************/
+
 
                 // Reactivate Screen Updating after sorting
                 this.Application.ScreenUpdating = true;
