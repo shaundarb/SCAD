@@ -698,17 +698,26 @@ namespace SCAD
                 }
             }
 
-            // Create optional mediation input arrays if box is checked
+            /************ CREATE MEDIATION INPUT ARRAYS WORKSHEET ************/
+            // Create optional mediation input arrays worksheet if box is checked
             if ((bool)arrDesignData[58] == true)
             {
                 Arrays(arrSorted, arrDiaphr, arrGap, arrShear, arrTruss, arrStud, arrBeam);
             }
 
+            /************ FORMAT LEVEL-SPECIFIC CALC TABLES ************/
             // Format workbook for level-specific calc tables
             SCADBuild(arrDesignData, arrStud.Count(), iLevel);          
 
             // Reactivate Screen Updating after sorting
             this.Application.ScreenUpdating = true;
+
+            /************ START STUD MATCHING ROUTINES ************/
+            // Send arrStud, arrTruss, arrGap to Horizonal Matching Routine
+            HSM_Step1(arrStud, arrTruss, arrGap, arrDesignData, iLevel);
+            
+            // Finalize design of stud workbook
+            // AutoDesign();
 
             return;
         }
@@ -726,7 +735,7 @@ namespace SCAD
                 wsCalcTable.Tab.TintAndShade = -0.5;
 
                 // Freeze the header row
-                wsCalcTable.Activate();
+                ((Excel._Worksheet)wsCalcTable).Activate();
                 wsCalcTable.Application.ActiveWindow.SplitRow = 6;
                 wsCalcTable.Application.ActiveWindow.FreezePanes = true;
 
@@ -959,7 +968,7 @@ namespace SCAD
             wsArrays.Tab.TintAndShade = 0.5;
 
             // Freeze the header row
-            wsArrays.Activate();
+            ((Excel._Worksheet)wsArrays).Activate();
             wsArrays.Application.ActiveWindow.SplitRow = 1;
             wsArrays.Application.ActiveWindow.FreezePanes = true;
 
@@ -1135,6 +1144,28 @@ namespace SCAD
             }
         }
 
+        // HSM_Step1() -- Handles horizontal matching of stud lines
+        public void HSM_Step1(List<RawLineData> arrStud, List<RawLineData> arrTruss, List<RawLineData> arrGap, Object[] arrDesignData, int iLevel)
+        {
+            // Declarations
+
+            // Load Progress Bar and set final value
+            SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
+            MediationProgress.Show();
+            MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + arrStud.Count() * 5 + (iLevel - 1) * arrStud.Count() + 42;
+
+            /************ MATCH Y-TRUSSES WITH X-STUD LINES FOR EACH LEVEL ************/
+            for (int i = 1; i < iLevel; i++ )
+            {
+                // If Horizontal Matching summary is checked, create worksheets
+                if ((bool)arrDesignData[55] == true)
+                {
+
+                }
+            }
+
+            return;
+        }
         // StudExport() -- Creates an AutoCAD script file of Stud Design.
         public string StudExport()
         {
