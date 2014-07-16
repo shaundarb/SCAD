@@ -91,12 +91,12 @@ namespace SCAD
             arrDesignData[52] = this.textBoxLvl4Ly.Text;
             arrDesignData[53] = this.textBoxLvl5Ly.Text;
             arrDesignData[54] = this.textBoxLvl6Ly.Text;
-            arrDesignData[55] = this.checkBoxHorizMatch.Text;
-            arrDesignData[56] = this.checkBoxVertMatch.Text;
-            arrDesignData[57] = this.checkBoxMedSumm.Text;
-            arrDesignData[58] = this.checkBoxMedArrays.Text;
+            arrDesignData[55] = this.checkBoxHorizMatch.Checked;
+            arrDesignData[56] = this.checkBoxVertMatch.Checked;
+            arrDesignData[57] = this.checkBoxMedSumm.Checked;
+            arrDesignData[58] = this.checkBoxMedArrays.Checked;
             arrDesignData[59] = this.textBoxIntRatio.Text;
-            arrDesignData[60] = this.checkBoxCompLimit.Text;
+            arrDesignData[60] = this.checkBoxCompLimit.Checked;
 
             this.Close();
         }

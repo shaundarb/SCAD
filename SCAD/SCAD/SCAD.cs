@@ -698,45 +698,14 @@ namespace SCAD
                 }
             }
 
-            // Format workbook for level-specific calc tables
-            SCADBuild(arrDesignData, arrStud.Count(), iLevel);
-
-            /*// Test if items have been arranged appropriately
-            j = 2;  // Counter to increment rows
-            Excel.Worksheet wsOutput = Application.Worksheets.get_Item("OUTPUT");
-
-            wsOutput.get_Range("C1").Value = "Label";
-            wsOutput.get_Range("D1").Value = "Xstart";
-            wsOutput.get_Range("E1").Value = "Ystart";
-            wsOutput.get_Range("G1").Value = "Xend";
-            wsOutput.get_Range("H1").Value = "Yend";
-            wsOutput.get_Range("I1").Value = "level";
-            wsOutput.get_Range("J1").Value = "direction";
-            wsOutput.get_Range("K1").Value = "studClass";
-            wsOutput.get_Range("L1").Value = "studThickness";
-            wsOutput.get_Range("M1").Value = "angled";
-            wsOutput.get_Range("N1").Value = "startGapLength";
-            wsOutput.get_Range("O1").Value = "endGapLength";
-            wsOutput.get_Range("P1").Value = "Yintercept";
-            wsOutput.get_Range("Q1").Value = "slope";
-            foreach (RawLineData element in arrDiaphr)
+            // Create optional mediation input arrays if box is checked
+            if ((bool)arrDesignData[58] == true)
             {
-                wsOutput.get_Range("C" + j).Value = element.label;
-                wsOutput.get_Range("D" + j).Value = element.Xstart;
-                wsOutput.get_Range("E" + j).Value = element.Ystart;
-                wsOutput.get_Range("G" + j).Value = element.Xend;
-                wsOutput.get_Range("H" + j).Value = element.Yend;
-                wsOutput.get_Range("I" + j).Value = element.level;
-                wsOutput.get_Range("J" + j).Value = "" + element.direction;
-                wsOutput.get_Range("K" + j).Value = "" + element.studClass;
-                wsOutput.get_Range("L" + j).Value = element.studThickness;
-                wsOutput.get_Range("M" + j).Value = element.angled;
-                wsOutput.get_Range("N" + j).Value = element.startGapLength;
-                wsOutput.get_Range("O" + j).Value = element.endGapLength;
-                wsOutput.get_Range("P" + j).Value = element.Yintercept;
-                wsOutput.get_Range("Q" + j).Value = element.slope;
-                j++;                    
-            }*/
+                Arrays(arrSorted, arrDiaphr, arrGap, arrShear, arrTruss, arrStud, arrBeam);
+            }
+
+            // Format workbook for level-specific calc tables
+            SCADBuild(arrDesignData, arrStud.Count(), iLevel);          
 
             // Reactivate Screen Updating after sorting
             this.Application.ScreenUpdating = true;
@@ -979,6 +948,193 @@ namespace SCAD
 
             return;
         }
+
+        // Arrays() -- Creates optional worksheet for all of the sorted raw data
+        public void Arrays(List<RawLineData> arrSorted, List<RawLineData> arrDiaphr, List<RawLineData> arrGap, List<RawLineData> arrShear, List<RawLineData> arrTruss, List<RawLineData> arrStud, List<RawLineData> arrBeam)
+        {
+            // Create new Array worksheet to output lines
+            Excel.Worksheet wsArrays = (Excel.Worksheet)this.Application.Worksheets.Add();
+            wsArrays.Name = "Arrays";
+            wsArrays.Tab.ThemeColor = Excel.XlThemeColor.xlThemeColorAccent3;
+            wsArrays.Tab.TintAndShade = 0.5;
+
+            // Freeze the header row
+            wsArrays.Activate();
+            wsArrays.Application.ActiveWindow.SplitRow = 1;
+            wsArrays.Application.ActiveWindow.FreezePanes = true;
+
+            int i = 2;  // Counter to increment rows
+
+            // Header Row for Array worksheet
+            wsArrays.get_Range("B1").Value = "Label";
+            wsArrays.get_Range("D1").Value = "Xstart";
+            wsArrays.get_Range("E1").Value = "Ystart";
+            wsArrays.get_Range("G1").Value = "Xend";
+            wsArrays.get_Range("H1").Value = "Yend";
+            wsArrays.get_Range("I1").Value = "level";
+            wsArrays.get_Range("J1").Value = "direction";
+            wsArrays.get_Range("K1").Value = "studClass";
+            wsArrays.get_Range("L1").Value = "studThickness";
+            wsArrays.get_Range("M1").Value = "angled";
+            wsArrays.get_Range("N1").Value = "startGapLength";
+            wsArrays.get_Range("O1").Value = "endGapLength";
+            wsArrays.get_Range("P1").Value = "Yintercept";
+            wsArrays.get_Range("Q1").Value = "slope";
+
+            // Loop through arrSorted
+            wsArrays.get_Range("A" + i).Value = "arrSorted";
+            foreach (RawLineData element in arrSorted)
+            {
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.Xstart;
+                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("G" + i).Value = element.Xend;
+                wsArrays.get_Range("H" + i).Value = element.Yend;
+                wsArrays.get_Range("I" + i).Value = element.level;
+                wsArrays.get_Range("J" + i).Value = "" + element.direction;
+                wsArrays.get_Range("K" + i).Value = "" + element.studClass;
+                wsArrays.get_Range("L" + i).Value = element.studThickness;
+                wsArrays.get_Range("M" + i).Value = element.angled;
+                wsArrays.get_Range("N" + i).Value = element.startGapLength;
+                wsArrays.get_Range("O" + i).Value = element.endGapLength;
+                wsArrays.get_Range("P" + i).Value = element.Yintercept;
+                wsArrays.get_Range("Q" + i).Value = element.slope;
+                i++;
+            }
+
+            // Loop through arrStud
+            i++;
+            wsArrays.get_Range("A" + i).Value = "arrStud";
+            foreach (RawLineData element in arrStud)
+            {
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.Xstart;
+                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("G" + i).Value = element.Xend;
+                wsArrays.get_Range("H" + i).Value = element.Yend;
+                wsArrays.get_Range("I" + i).Value = element.level;
+                wsArrays.get_Range("J" + i).Value = "" + element.direction;
+                wsArrays.get_Range("K" + i).Value = "" + element.studClass;
+                wsArrays.get_Range("L" + i).Value = element.studThickness;
+                wsArrays.get_Range("M" + i).Value = element.angled;
+                wsArrays.get_Range("N" + i).Value = element.startGapLength;
+                wsArrays.get_Range("O" + i).Value = element.endGapLength;
+                wsArrays.get_Range("P" + i).Value = element.Yintercept;
+                wsArrays.get_Range("Q" + i).Value = element.slope;
+                i++;
+            }
+
+            // Loop through arrTruss
+            i++;
+            wsArrays.get_Range("A" + i).Value = "arrTruss";
+            foreach (RawLineData element in arrTruss)
+            {
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.Xstart;
+                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("G" + i).Value = element.Xend;
+                wsArrays.get_Range("H" + i).Value = element.Yend;
+                wsArrays.get_Range("I" + i).Value = element.level;
+                wsArrays.get_Range("J" + i).Value = "" + element.direction;
+                wsArrays.get_Range("K" + i).Value = "" + element.studClass;
+                wsArrays.get_Range("L" + i).Value = element.studThickness;
+                wsArrays.get_Range("M" + i).Value = element.angled;
+                wsArrays.get_Range("N" + i).Value = element.startGapLength;
+                wsArrays.get_Range("O" + i).Value = element.endGapLength;
+                wsArrays.get_Range("P" + i).Value = element.Yintercept;
+                wsArrays.get_Range("Q" + i).Value = element.slope;
+                i++;
+            }
+
+            // Loop through arrGap
+            i++;
+            wsArrays.get_Range("A" + i).Value = "arrGap";
+            foreach (RawLineData element in arrGap)
+            {
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.Xstart;
+                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("G" + i).Value = element.Xend;
+                wsArrays.get_Range("H" + i).Value = element.Yend;
+                wsArrays.get_Range("I" + i).Value = element.level;
+                wsArrays.get_Range("J" + i).Value = "" + element.direction;
+                wsArrays.get_Range("K" + i).Value = "" + element.studClass;
+                wsArrays.get_Range("L" + i).Value = element.studThickness;
+                wsArrays.get_Range("M" + i).Value = element.angled;
+                wsArrays.get_Range("N" + i).Value = element.startGapLength;
+                wsArrays.get_Range("O" + i).Value = element.endGapLength;
+                wsArrays.get_Range("P" + i).Value = element.Yintercept;
+                wsArrays.get_Range("Q" + i).Value = element.slope;
+                i++;
+            }
+
+            // Loop through arrDiaphr
+            i++;
+            wsArrays.get_Range("A" + i).Value = "arrDiaphr";
+            foreach (RawLineData element in arrDiaphr)
+            {
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.Xstart;
+                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("G" + i).Value = element.Xend;
+                wsArrays.get_Range("H" + i).Value = element.Yend;
+                wsArrays.get_Range("I" + i).Value = element.level;
+                wsArrays.get_Range("J" + i).Value = "" + element.direction;
+                wsArrays.get_Range("K" + i).Value = "" + element.studClass;
+                wsArrays.get_Range("L" + i).Value = element.studThickness;
+                wsArrays.get_Range("M" + i).Value = element.angled;
+                wsArrays.get_Range("N" + i).Value = element.startGapLength;
+                wsArrays.get_Range("O" + i).Value = element.endGapLength;
+                wsArrays.get_Range("P" + i).Value = element.Yintercept;
+                wsArrays.get_Range("Q" + i).Value = element.slope;
+                i++;
+            }
+
+            // Loop through arrBeam
+            i++;
+            wsArrays.get_Range("A" + i).Value = "arrBeam";
+            foreach (RawLineData element in arrBeam)
+            {
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.Xstart;
+                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("G" + i).Value = element.Xend;
+                wsArrays.get_Range("H" + i).Value = element.Yend;
+                wsArrays.get_Range("I" + i).Value = element.level;
+                wsArrays.get_Range("J" + i).Value = "" + element.direction;
+                wsArrays.get_Range("K" + i).Value = "" + element.studClass;
+                wsArrays.get_Range("L" + i).Value = element.studThickness;
+                wsArrays.get_Range("M" + i).Value = element.angled;
+                wsArrays.get_Range("N" + i).Value = element.startGapLength;
+                wsArrays.get_Range("O" + i).Value = element.endGapLength;
+                wsArrays.get_Range("P" + i).Value = element.Yintercept;
+                wsArrays.get_Range("Q" + i).Value = element.slope;
+                i++;
+            }
+
+            // Loop through arrShear
+            i++;
+            wsArrays.get_Range("A" + i).Value = "arrShear";
+            foreach (RawLineData element in arrShear)
+            {
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.Xstart;
+                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("G" + i).Value = element.Xend;
+                wsArrays.get_Range("H" + i).Value = element.Yend;
+                wsArrays.get_Range("I" + i).Value = element.level;
+                wsArrays.get_Range("J" + i).Value = "" + element.direction;
+                wsArrays.get_Range("K" + i).Value = "" + element.studClass;
+                wsArrays.get_Range("L" + i).Value = element.studThickness;
+                wsArrays.get_Range("M" + i).Value = element.angled;
+                wsArrays.get_Range("N" + i).Value = element.startGapLength;
+                wsArrays.get_Range("O" + i).Value = element.endGapLength;
+                wsArrays.get_Range("P" + i).Value = element.Yintercept;
+                wsArrays.get_Range("Q" + i).Value = element.slope;
+                i++;
+            }
+        }
+
         // StudExport() -- Creates an AutoCAD script file of Stud Design.
         public string StudExport()
         {
