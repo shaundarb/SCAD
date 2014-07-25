@@ -1157,10 +1157,29 @@ namespace SCAD
             /************ MATCH Y-TRUSSES WITH X-STUD LINES FOR EACH LEVEL ************/
             for (int i = 1; i < iLevel; i++ )
             {
-                // If Horizontal Matching summary is checked, create worksheets
+                // If Horizontal Matching summary is checked, create and format worksheets for output
                 if ((bool)arrDesignData[55] == true)
                 {
-
+                    Excel.Worksheet wsXdir = this.Application.Worksheets.Add("X-DIR L" + i);
+                    wsXdir.Tab.ThemeColor = Excel.XlThemeColor.xlThemeColorLight2;
+                    wsXdir.Tab.TintAndShade = 0.4;
+                    wsXdir.get_Range("B1").Font.Bold = true;
+                    wsXdir.get_Range("B1").Font.Name = "Arial";
+                    wsXdir.get_Range("B1").Font.Size = 12;
+                    wsXdir.get_Range("D9").EntireColumn.Activate();
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                    wsXdir.get_Range("C8").EntireRow.Activate();
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                    wsXdir.get_Range("D7", "D8").Activate();
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
+                    wsXdir.get_Range("A1", "NN1").EntireColumn.AutoFit();
                 }
             }
 
