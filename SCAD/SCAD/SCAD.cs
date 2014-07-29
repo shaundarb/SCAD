@@ -93,6 +93,7 @@ namespace SCAD
             public string layer { get; set; }
             public bool angled { get; set; }
             public char direction { get; set; }
+            public float length { get; set; }
             public float Xstart { get; set; }
             public float Xend { get; set; }
             public float Ystart { get; set; }
@@ -104,7 +105,9 @@ namespace SCAD
             public int level { get; set; }
             public char studClass { get; set; }         // Designates Interior/Exterior
             public int studThickness { get; set; }
-
+            public string trussMatch { get; set; }      // Matching truss label for stud lines
+            public int tribLength { get; set; }         // Truss tributary length for stud lines
+            public char trussMatchType { get; set; }    // Matching truss type for stud lines
         }
 
         /******************** STUD DESIGN methods *******************/
@@ -171,6 +174,7 @@ namespace SCAD
                 arrNotSorted.Add(new RawLineData()
                 {
                     layer = wsRawData.get_Range("C" + (2 + i)).Text,
+                    length = (float)wsRawData.get_Range("E" + (2+i)).Value,
                     Xstart = (float)wsRawData.get_Range("G" + (2 + i)).Value,
                     Xend = (float)wsRawData.get_Range("I" + (2 + i)).Value,
                     Ystart = (float)wsRawData.get_Range("H" + (2 + i)).Value,
@@ -352,6 +356,7 @@ namespace SCAD
                     arrTruss.Add(new RawLineData()
                     {
                         layer = element.layer,
+                        length = element.length,
                         angled = element.angled,
                         direction = element.direction,
                         Xstart = element.Xstart,
@@ -1147,42 +1152,188 @@ namespace SCAD
         // HSM_Step1() -- Handles horizontal matching of stud lines
         public void HSM_Step1(List<RawLineData> arrStud, List<RawLineData> arrTruss, List<RawLineData> arrGap, Object[] arrDesignData, int iLevel)
         {
-            // Declarations
-
-            // Load Progress Bar and set final value
-            SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
-            MediationProgress.Show();
-            MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + arrStud.Count() * 5 + (iLevel - 1) * arrStud.Count() + 42;
-
-            /************ MATCH Y-TRUSSES WITH X-STUD LINES FOR EACH LEVEL ************/
-            for (int i = 1; i < iLevel; i++ )
+            try
             {
-                // If Horizontal Matching summary is checked, create and format worksheets for output
-                if ((bool)arrDesignData[55] == true)
+                // Declarations
+                double dIntersect = new double();           // Used to store intersection of stud and truss line
+
+                // Load Progress Bar and set final value
+                SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
+                MediationProgress.Show();
+                MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + arrStud.Count() * 5 + (iLevel - 1) * arrStud.Count() + 42;
+
+                /************ MATCH Y-TRUSSES WITH X-STUD LINES FOR EACH LEVEL ************/
+                for (int i = 1; i <= iLevel; i++)
                 {
-                    Excel.Worksheet wsXdir = this.Application.Worksheets.Add("X-DIR L" + i);
-                    wsXdir.Tab.ThemeColor = Excel.XlThemeColor.xlThemeColorLight2;
-                    wsXdir.Tab.TintAndShade = 0.4;
-                    wsXdir.get_Range("B1").Font.Bold = true;
-                    wsXdir.get_Range("B1").Font.Name = "Arial";
-                    wsXdir.get_Range("B1").Font.Size = 12;
-                    wsXdir.get_Range("D9").EntireColumn.Activate();
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
-                    wsXdir.get_Range("C8").EntireRow.Activate();
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
-                    wsXdir.get_Range("D7", "D8").Activate();
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
-                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
-                    wsXdir.get_Range("A1", "NN1").EntireColumn.AutoFit();
+                    // If Horizontal Matching summary is checked, create and format matching datasheets for output
+                    if ((bool)arrDesignData[55] == true)
+                    {
+                        // Create new worksheet for X-Direction matches for each level and format it initially
+                        Excel.Worksheet wsXdir = this.Application.Worksheets.Add();
+                        wsXdir.Name = "X-DIR L" + i;
+                        wsXdir.Tab.ThemeColor = Excel.XlThemeColor.xlThemeColorLight2;
+                        wsXdir.Tab.TintAndShade = 0.4;
+                        wsXdir.get_Range("B1").Font.Bold = true;
+                        wsXdir.get_Range("B1").Font.Name = "Arial";
+                        wsXdir.get_Range("B1").Font.Size = 12;
+                        wsXdir.get_Range("D9").EntireColumn.Activate();
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                        wsXdir.get_Range("C8").EntireRow.Activate();
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                        wsXdir.get_Range("D7", "D8").Activate();
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
+
+                        // Populate headers
+                        wsXdir.get_Range("B1").Value = "X DIRECTION STUD LINES MATCHING";
+                        wsXdir.get_Range("B2").Value = "X Direction Stud Count:";
+                        wsXdir.get_Range("B3").Value = "Angled Stud Count:";
+                        wsXdir.get_Range("B4").Value = "Y Direction Truss Count:";
+                        wsXdir.get_Range("B5").Value = "Angled Truss Count:";
+                        wsXdir.get_Range("D7").Value = "X DIR. STUD LINES";
+                        wsXdir.get_Range("C8").Value = "Y DIR. TRUSS LINES";
+                        wsXdir.get_Range("E8").Value = "Roof";
+                        wsXdir.get_Range("F8").Value = "Unit";
+                        wsXdir.get_Range("G8").Value = "Balcony";
+                        wsXdir.get_Range("H8").Value = "Corridor";
+                        wsXdir.get_Range("I8").Value = "Other";
+                        wsXdir.get_Range("C2").Value = arrStud.Count(n => n.direction == 'X' && n.level == i);
+                        wsXdir.get_Range("C3").Value = arrStud.Count(n => n.direction == 'A' && n.level == i);
+                        wsXdir.get_Range("C4").Value = arrTruss.Count(n => n.direction == 'Y' && n.level == i);
+                        wsXdir.get_Range("C5").Value = arrTruss.Count(n => n.direction == 'A' && n.level == i);
+                        wsXdir.get_Range("A1", "NN1").EntireColumn.AutoFit();
+
+                        // Create new worksheet for Y-Direction matches for each level and format it initially
+                        Excel.Worksheet wsYdir = this.Application.Worksheets.Add();
+                        wsYdir.Name = "Y-DIR L" + i;
+                        wsYdir.Tab.ThemeColor = Excel.XlThemeColor.xlThemeColorLight2;
+                        wsYdir.Tab.TintAndShade = 0.4;
+                        wsYdir.get_Range("B1").Font.Bold = true;
+                        wsYdir.get_Range("B1").Font.Name = "Arial";
+                        wsYdir.get_Range("B1").Font.Size = 12;
+                        wsYdir.get_Range("D9").EntireColumn.Activate();
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                        wsYdir.get_Range("C8").EntireRow.Activate();
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                        wsYdir.get_Range("D7", "D8").Activate();
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
+                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
+
+                        // Populate headers
+                        wsYdir.get_Range("B1").Value = "Y DIRECTION STUD LINES MATCHING";
+                        wsYdir.get_Range("B2").Value = "Y Direction Stud Count:";
+                        wsYdir.get_Range("B3").Value = "Angled Stud Count:";
+                        wsYdir.get_Range("B4").Value = "X Direction Truss Count:";
+                        wsYdir.get_Range("B5").Value = "Angled Truss Count:";
+                        wsYdir.get_Range("D7").Value = "Y DIR. STUD LINES";
+                        wsYdir.get_Range("C8").Value = "X DIR. TRUSS LINES";
+                        wsYdir.get_Range("E8").Value = "Roof";
+                        wsYdir.get_Range("F8").Value = "Unit";
+                        wsYdir.get_Range("G8").Value = "Balcony";
+                        wsYdir.get_Range("H8").Value = "Corridor";
+                        wsYdir.get_Range("I8").Value = "Other";
+                        wsYdir.get_Range("C2").Value = arrStud.Count(n => n.direction == 'Y' && n.level == i);
+                        wsYdir.get_Range("C3").Value = arrStud.Count(n => n.direction == 'A' && n.level == i);
+                        wsYdir.get_Range("C4").Value = arrTruss.Count(n => n.direction == 'X' && n.level == i);
+                        wsYdir.get_Range("C5").Value = arrTruss.Count(n => n.direction == 'A' && n.level == i);
+                        wsYdir.get_Range("A1", "NN1").EntireColumn.AutoFit();
+                    }
+
+                    // Cycle through matchings of X-Direction stud lines, begin with the truss element then match it to individual stud elements
+                    foreach (RawLineData trussElement in arrTruss)
+                    {
+                        foreach (RawLineData studElement in arrStud)
+                        {
+                            // If stud line is X direction and on same level and truss line is Y direction and on same level
+                            if (studElement.direction == 'X' && studElement.level == i && trussElement.direction == 'Y' && trussElement.level == i)
+                            {
+                                // Check to see if truss line falls within limits of the stud line
+                                if (trussElement.Xstart >= studElement.Xstart && trussElement.Xstart <= studElement.Xend &&
+                                    studElement.Ystart >= trussElement.Ystart && studElement.Ystart <= trussElement.Yend)
+                                {
+                                    // Assign truss label as match for stud line
+                                    studElement.trussMatch = trussElement.label;
+
+                                    // Assign truss match type for stud line
+                                    switch (trussElement.label.Substring(2,2))
+                                    {
+                                        case "TR" :
+                                            studElement.trussMatchType = 'R';
+                                            break;
+                                        case "TU" :
+                                            studElement.trussMatchType = 'U';
+                                            break;
+                                        case "TB" :
+                                            studElement.trussMatchType = 'B';
+                                            break;
+                                        case "TC" :
+                                            studElement.trussMatchType = 'C';
+                                            break;
+                                        case "TO" :
+                                            studElement.trussMatchType = 'O';
+                                            break;
+                                        default:
+                                            studElement.trussMatchType = 'X';
+                                            break;
+                                    }
+                                }
+                            }
+
+                            // If stud line is X direction and on same level and truss line is A direction and on same level
+                            if (studElement.direction == 'X' && studElement.level == i && trussElement.direction == 'A' && trussElement.level == i)
+                            {
+                                // Determine intersection of stud and truss line
+                                dIntersect = (trussElement.Yintercept - studElement.Ystart) / (-1 * trussElement.slope);
+
+                                // Check to see if truss line falls within limits of the stud line
+                                if (studElement.Xstart <= (dIntersect + 1) && studElement.Xend >= (dIntersect - 1)  &&
+                                    trussElement.Ystart >= studElement.Ystart && trussElement.Yend <= studElement.Yend)
+                                {
+                                    // Assign truss label as match for stud line
+                                    studElement.trussMatch = trussElement.label;
+
+                                    // Assign truss match type for stud line
+                                    switch (trussElement.label.Substring(2, 2))
+                                    {
+                                        case "TR":
+                                            studElement.trussMatchType = 'R';
+                                            break;
+                                        case "TU":
+                                            studElement.trussMatchType = 'U';
+                                            break;
+                                        case "TB":
+                                            studElement.trussMatchType = 'B';
+                                            break;
+                                        case "TC":
+                                            studElement.trussMatchType = 'C';
+                                            break;
+                                        case "TO":
+                                            studElement.trussMatchType = 'O';
+                                            break;
+                                        default:
+                                            studElement.trussMatchType = 'X';
+                                            break;
+                                    }
+                                }
+                            }
+
+                        }
+                    }
                 }
             }
-
+            catch (Exception e) { MessageBox.Show(e.Message); }
             return;
         }
         // StudExport() -- Creates an AutoCAD script file of Stud Design.
