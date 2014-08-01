@@ -105,9 +105,14 @@ namespace SCAD
             public int level { get; set; }
             public char studClass { get; set; }         // Designates Interior/Exterior
             public int studThickness { get; set; }
-            public string trussMatch { get; set; }      // Matching truss label for stud lines
+            public List<string> trussMatches { get; set; }      // Matching truss label for stud lines
             public int tribLength { get; set; }         // Truss tributary length for stud lines
             public char trussMatchType { get; set; }    // Matching truss type for stud lines
+
+            public void User()
+            {
+                trussMatches = new List<string>();
+            }
         }
 
         /******************** STUD DESIGN methods *******************/
@@ -1264,7 +1269,7 @@ namespace SCAD
                                     studElement.Ystart >= trussElement.Ystart && studElement.Ystart <= trussElement.Yend)
                                 {
                                     // Assign truss label as match for stud line
-                                    studElement.trussMatch = trussElement.label;
+                                    studElement.trussMatches.Add(trussElement.label);
 
                                     // Assign truss match type for stud line
                                     switch (trussElement.label.Substring(2,2))
@@ -1302,7 +1307,7 @@ namespace SCAD
                                     trussElement.Ystart >= studElement.Ystart && trussElement.Yend <= studElement.Yend)
                                 {
                                     // Assign truss label as match for stud line
-                                    studElement.trussMatch = trussElement.label;
+                                    studElement.trussMatches.Add(trussElement.label);
 
                                     // Assign truss match type for stud line
                                     switch (trussElement.label.Substring(2, 2))
