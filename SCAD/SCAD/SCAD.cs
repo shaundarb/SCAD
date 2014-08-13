@@ -103,16 +103,32 @@ namespace SCAD
             public float startGapLength { get; set; }
             public float endGapLength { get; set; }
             public int level { get; set; }
-            public char studClass { get; set; }         // Designates Interior/Exterior
+            public char studClass { get; set; }                 // Designates Interior/Exterior Wall
             public int studThickness { get; set; }
-            public List<string> trussMatches { get; set; }      // Matching truss label for stud lines
-            public int tribLength { get; set; }         // Truss tributary length for stud lines
-            public char trussMatchType { get; set; }    // Matching truss type for stud lines
+            public List<trussMatch> trussMatches;
 
-            public void User()
+            public RawLineData()
             {
-                trussMatches = new List<string>();
+                this.trussMatches = new List<trussMatch>();
             }
+
+            public void addTrussMatch(string label, char type, int length)
+            {
+                trussMatches.Add(new trussMatch()
+                {
+                    trussLabel = label,
+                    trussType = type,
+                    trussLength = length
+                });
+            }
+        }
+
+        public class trussMatch                                 // Stores matched truss data
+        {
+            public string trussLabel { get; set; }
+            public char trussType { get; set; }
+            public int trussLength { get; set; }
+            public char trussAngled { get; set; }               // 'A' if both stud and truss are angled
         }
 
         /******************** STUD DESIGN methods *******************/
@@ -1160,7 +1176,10 @@ namespace SCAD
             try
             {
                 // Declarations
-                double dIntersect = new double();           // Used to store intersection of stud and truss line
+                double dIntersect = new double();                           // Used to store intersection of stud and truss line
+                int jx = new int(); int jy = new int();                     // Counters to iterate through stud worksheet cells
+                int kx = new int(); int ky = new int();                     // Counters to iterate through truss worksheet cells
+                
 
                 // Load Progress Bar and set final value
                 SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
@@ -1257,6 +1276,7 @@ namespace SCAD
                     }
 
                     // Cycle through matchings of X-Direction stud lines, begin with the truss element then match it to individual stud elements
+                    jx = 0; jy = 0; kx = 0; ky = 0;
                     foreach (RawLineData trussElement in arrTruss)
                     {
                         foreach (RawLineData studElement in arrStud)
@@ -1268,29 +1288,56 @@ namespace SCAD
                                 if (trussElement.Xstart >= studElement.Xstart && trussElement.Xstart <= studElement.Xend &&
                                     studElement.Ystart >= trussElement.Ystart && studElement.Ystart <= trussElement.Yend)
                                 {
-                                    // Assign truss label as match for stud line
-                                    studElement.trussMatches.Add(trussElement.label);
-
-                                    // Assign truss match type for stud line
+                                    // Assign truss match label, type, and length for stud line
                                     switch (trussElement.label.Substring(2,2))
                                     {
-                                        case "TR" :
-                                            studElement.trussMatchType = 'R';
+                                        case "TR":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'R',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
-                                        case "TU" :
-                                            studElement.trussMatchType = 'U';
+                                        case "TU":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                                {
+                                                    trussLabel = trussElement.label,
+                                                    trussType = 'U',
+                                                    trussLength = (int)(trussElement.length / 2)
+                                                });
                                             break;
-                                        case "TB" :
-                                            studElement.trussMatchType = 'B';
+                                        case "TB":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'B',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
-                                        case "TC" :
-                                            studElement.trussMatchType = 'C';
+                                        case "TC":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'C',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
-                                        case "TO" :
-                                            studElement.trussMatchType = 'O';
+                                        case "TO":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'O',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
                                         default:
-                                            studElement.trussMatchType = 'X';
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'X',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
                                     }
                                 }
@@ -1302,39 +1349,502 @@ namespace SCAD
                                 // Determine intersection of stud and truss line
                                 dIntersect = (trussElement.Yintercept - studElement.Ystart) / (-1 * trussElement.slope);
 
-                                // Check to see if truss line falls within limits of the stud line
-                                if (studElement.Xstart <= (dIntersect + 1) && studElement.Xend >= (dIntersect - 1)  &&
+                                // Check to see if truss line falls within limits of the stud line, case is if intersection is negative
+                                if (dIntersect < 0 && studElement.Xstart <= (dIntersect + 1) && studElement.Xend >= (dIntersect - 1)  &&
                                     trussElement.Ystart >= studElement.Ystart && trussElement.Yend <= studElement.Yend)
                                 {
-                                    // Assign truss label as match for stud line
-                                    studElement.trussMatches.Add(trussElement.label);
-
-                                    // Assign truss match type for stud line
+                                    // Assign truss match label, type, and length for stud line
                                     switch (trussElement.label.Substring(2, 2))
                                     {
                                         case "TR":
-                                            studElement.trussMatchType = 'R';
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'R',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
                                         case "TU":
-                                            studElement.trussMatchType = 'U';
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'U',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
                                         case "TB":
-                                            studElement.trussMatchType = 'B';
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'B',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
                                         case "TC":
-                                            studElement.trussMatchType = 'C';
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'C',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
                                         case "TO":
-                                            studElement.trussMatchType = 'O';
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'O',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
                                         default:
-                                            studElement.trussMatchType = 'X';
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'X',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                    }
+                                }
+
+                                // Check to see if truss line falls within limits of the stud line, case is if intersection is positive
+                                if (dIntersect > 0 && studElement.Xstart <= (dIntersect + 1) && studElement.Xend >= (dIntersect - 1) &&
+                                    trussElement.Ystart <= studElement.Ystart && trussElement.Yend >= studElement.Yend)
+                                {
+                                    // Assign truss match label, type, and length for stud line
+                                    switch (trussElement.label.Substring(2, 2))
+                                    {
+                                        case "TR":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'R',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        case "TU":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'U',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        case "TB":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'B',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        case "TC":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'C',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        case "TO":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'O',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        default:
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'X',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
                                             break;
                                     }
                                 }
                             }
 
+                            // If stud line is angled and truss line is y direction, check to see if within bounds of stud line
+                            if (studElement.direction == 'A' && studElement.level == i && trussElement.direction == 'Y' && trussElement.level == i)
+                            {
+                                // Determine intersection of angled stud and y direction truss
+                                dIntersect = studElement.slope * trussElement.Xstart - studElement.Yintercept;
+
+                                if ((dIntersect + 1) >= trussElement.Ystart && (dIntersect - 1) <= trussElement.Yend && trussElement.Xstart >= studElement.Xstart
+                                    && trussElement.Xstart <= studElement.Xend)
+                                {
+                                    // Assign truss match label, type, and length for stud line
+                                    switch (trussElement.label.Substring(2, 2))
+                                    {
+                                        case "TR":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'R',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        case "TU":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'U',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        case "TB":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'B',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        case "TC":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'C',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        case "TO":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'O',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                        default:
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'X',
+                                                trussLength = (int)(trussElement.length / 2)
+                                            });
+                                            break;
+                                    }
+                                }
+                            }
+
+                            // If stud is angled and truss is angled, check to see if within bounds of stud
+                            if (studElement.direction == 'A' && studElement.level == i && trussElement.direction == 'A' && trussElement.level == i)
+                            {
+                                double dIntersectX = new double();        // Used to store potential x intersection coord
+
+                                // Determine potential intersection X coord
+                                if ((trussElement.slope - studElement.slope) == 0)
+                                {
+                                    dIntersectX = 0;
+                                }
+                                else
+                                {
+                                    dIntersectX = (studElement.Yintercept - trussElement.Yintercept) / (trussElement.slope - studElement.slope);
+                                }
+
+                                dIntersect = (studElement.slope * dIntersectX) + studElement.Yintercept;
+
+                                // Check if intersection falls within angled stud and truss lines, case is stud slope is NEGATIVE and truss slope is POSITIVE
+                                if (studElement.slope < 0 && trussElement.slope > 0 && (dIntersectX + 1) >= studElement.Xstart && (dIntersectX -1) <= studElement.Xend && 
+                                    (dIntersect - 1) <= studElement.Ystart && (dIntersect + 1) >= studElement.Yend && (dIntersectX + 1) >= trussElement.Xstart &&
+                                    (dIntersectX - 1) <= trussElement.Xend && (dIntersect + 1) >= trussElement.Ystart && (dIntersect - 1) <= trussElement.Yend)
+                                {
+                                    // Assign truss match label, type, and length for stud line
+                                    switch (trussElement.label.Substring(2, 2))
+                                    {
+                                        case "TR":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'R',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TU":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'U',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TB":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'B',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TC":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'C',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TO":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'O',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        default:
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'X',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                    }
+                                }
+
+                                // Check if intersection falls within angled stud and truss lines, case is stud slope is NEGATIVE and truss slope is NEGATIVE
+                                if (studElement.slope < 0 && trussElement.slope < 0 && (dIntersectX + 1) >= studElement.Xstart && (dIntersectX - 1) <= studElement.Xend &&
+                                    (dIntersect - 1) <= studElement.Ystart && (dIntersect + 1) >= studElement.Yend && (dIntersectX + 1) >= trussElement.Xstart &&
+                                    (dIntersectX - 1) <= trussElement.Xend && (dIntersect - 1) <= trussElement.Ystart && (dIntersect + 1) >= trussElement.Yend)
+                                {
+                                    // Assign truss match label, type, and length for stud line
+                                    switch (trussElement.label.Substring(2, 2))
+                                    {
+                                        case "TR":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'R',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TU":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'U',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TB":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'B',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TC":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'C',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TO":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'O',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        default:
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'X',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                    }
+                                }
+
+                                // Check if intersection falls within angled stud and truss lines, case is stud slope is POSITVE and truss slope is POSITIVE
+                                if (studElement.slope > 0 && trussElement.slope > 0 && (dIntersectX + 1) >= studElement.Xstart && (dIntersectX - 1) <= studElement.Xend &&
+                                    (dIntersect + 1) >= studElement.Ystart && (dIntersect - 1) <= studElement.Yend && (dIntersectX + 1) >= trussElement.Xstart &&
+                                    (dIntersectX - 1) <= trussElement.Xend && (dIntersect + 1) >= trussElement.Ystart && (dIntersect - 1) <= trussElement.Yend)
+                                {
+                                    // Assign truss match label, type, and length for stud line
+                                    switch (trussElement.label.Substring(2, 2))
+                                    {
+                                        case "TR":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'R',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TU":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'U',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TB":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'B',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TC":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'C',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TO":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'O',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        default:
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'X',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                    }
+                                }
+
+                                // Check if intersection falls within angled stud and truss lines, case is stud slope is POSITIVE and truss slope is NEGATIVE
+                                if (studElement.slope > 0 && trussElement.slope < 0 && (dIntersectX + 1) >= studElement.Xstart && (dIntersectX - 1) <= studElement.Xend &&
+                                    (dIntersect + 1) >= studElement.Ystart && (dIntersect - 1) <= studElement.Yend && (dIntersectX + 1) >= trussElement.Xstart &&
+                                    (dIntersectX - 1) <= trussElement.Xend && (dIntersect - 1) <= trussElement.Ystart && (dIntersect + 1) >= trussElement.Yend)
+                                {
+                                    // Assign truss match label, type, and length for stud line
+                                    switch (trussElement.label.Substring(2, 2))
+                                    {
+                                        case "TR":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'R',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TU":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'U',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TB":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'B',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TC":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'C',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        case "TO":
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'O',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                        default:
+                                            studElement.trussMatches.Add(new trussMatch()
+                                            {
+                                                trussLabel = trussElement.label,
+                                                trussType = 'X',
+                                                trussLength = (int)(trussElement.length / 2),
+                                                trussAngled = 'A'
+                                            });
+                                            break;
+                                    }
+                                }
+                            }
+
+                            // Add X/A direction stud label to match worksheet if matching report is desired
+                            if ((bool)arrDesignData[55] == true && studElement.level == i && (studElement.direction == 'X' || studElement.direction == 'A')
+                                && jx < (arrStud.Count(n => n.direction == 'X' && n.level == i) + arrStud.Count(n => n.direction == 'A' && n.level == i)))
+                            {
+                                Excel.Worksheet wsMediationX = Application.Worksheets.get_Item("X-DIR L" + i);
+                                wsMediationX.get_Range("D" + (9 + jx)).Value = studElement.label;
+                                jx++;
+                            }
+
+                            // Add Y direction stud label to match worksheet if matching report is desired
+                            if ((bool)arrDesignData[55] == true && studElement.level == i && (studElement.direction == 'Y' || studElement.direction == 'A')
+                                && jy < (arrStud.Count(n => n.direction == 'Y' && n.level == i) + arrStud.Count(n => n.direction == 'A' && n.level == i)))
+                            {
+                                Excel.Worksheet wsMediationY = Application.Worksheets.get_Item("Y-DIR L" + i);
+                                wsMediationY.get_Range("D" + (9 + jy)).Value = studElement.label;
+                                jy++;
+                            }
                         }
+
+                        // Add Y/A direction truss label to match worksheet if matching report is desired
+                        if ((bool)arrDesignData[55] == true && trussElement.level == i && (trussElement.direction == 'Y' || trussElement.direction == 'A'))
+                        {
+                            Excel.Worksheet wsMediationX = Application.Worksheets.get_Item("X-DIR L" + i);
+                            wsMediationX.get_Range("J" + 8).Offset[0,kx].Value = trussElement.label;
+                            kx++;
+                        }
+
+                        // Add X direction truss label to match worksheet if matching report is desired
+                        if ((bool)arrDesignData[55] == true && trussElement.level == i && trussElement.direction == 'X')
+                        {
+                            Excel.Worksheet wsMediationY = Application.Worksheets.get_Item("Y-DIR L" + i);
+                            wsMediationY.get_Range("J" + 8).Offset[0, ky].Value = trussElement.label;
+                            ky++;
+                        }
+
+                        // Increment progress bar
+                        MediationProgress.progressBar.Increment(1);
                     }
                 }
             }
