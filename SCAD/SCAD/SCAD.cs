@@ -1466,10 +1466,10 @@ namespace SCAD
                                 }
                             }
 
-                            // If stud line is angled and truss line is y direction, check to see if within bounds of stud line
+                            // If stud line is angled and truss line is Y direction, check to see if within bounds of stud line
                             if (studElement.direction == 'A' && studElement.level == i && trussElement.direction == 'Y' && trussElement.level == i)
                             {
-                                // Determine intersection of angled stud and y direction truss
+                                // Determine intersection of angled stud and Y direction truss
                                 dIntersect = studElement.slope * trussElement.Xstart - studElement.Yintercept;
 
                                 if ((dIntersect + 1) >= trussElement.Ystart && (dIntersect - 1) <= trussElement.Yend && trussElement.Xstart >= studElement.Xstart
@@ -1808,21 +1808,103 @@ namespace SCAD
                                 }
                             }
 
-                            // Add X/A direction stud label to match worksheet if matching report is desired
-                            if ((bool)arrDesignData[55] == true && studElement.level == i && (studElement.direction == 'X' || studElement.direction == 'A')
+                            // Add X/A direction stud label to match worksheet if matching report is desired (only completed on first truss pass)
+                            if ((bool)arrDesignData[55] == true && kx == 0 && studElement.level == i && (studElement.direction == 'X' || studElement.direction == 'A')
                                 && jx < (arrStud.Count(n => n.direction == 'X' && n.level == i) + arrStud.Count(n => n.direction == 'A' && n.level == i)))
                             {
                                 Excel.Worksheet wsMediationX = Application.Worksheets.get_Item("X-DIR L" + i);
                                 wsMediationX.get_Range("D" + (9 + jx)).Value = studElement.label;
-                                jx++;
                             }
 
-                            // Add Y direction stud label to match worksheet if matching report is desired
-                            if ((bool)arrDesignData[55] == true && studElement.level == i && (studElement.direction == 'Y' || studElement.direction == 'A')
+                            // Add truss tributary load to matching X direction stud label on match worksheet if matching report is desired
+                            if ((bool)arrDesignData[55] == true && studElement.level == i && (studElement.direction == 'X' || studElement.direction == 'A')
+                                && studElement.trussMatches.Any(r => r.trussLabel == trussElement.label))
+                            {
+                                Excel.Worksheet wsMediationX = Application.Worksheets.get_Item("X-DIR L" + i);
+                                wsMediationX.get_Range("J" + (9 + jx)).Offset[0,kx].Value = (int)(trussElement.length / 2);
+                                // Add cumulative tributary load totals for each stud line
+                                switch((char)trussElement.label[3])
+                                {
+                                    case 'U':
+                                        wsMediationX.get_Range("F" + (9 + jx)).Value = (wsMediationX.get_Range("F" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationX.get_Range("F" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                    case 'R':
+                                        wsMediationX.get_Range("E" + (9 + jx)).Value = (wsMediationX.get_Range("E" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationX.get_Range("E" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                    case 'B':
+                                        wsMediationX.get_Range("G" + (9 + jx)).Value = (wsMediationX.get_Range("G" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationX.get_Range("G" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                    case 'C':
+                                        wsMediationX.get_Range("H" + (9 + jx)).Value = (wsMediationX.get_Range("H" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationX.get_Range("H" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                    case 'O':
+                                        wsMediationX.get_Range("I" + (9 + jx)).Value = (wsMediationX.get_Range("I" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationX.get_Range("I" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                }
+                            }
+
+                            // Add Y direction stud label to match worksheet if matching report is desired (only completed on first truss pass)
+                            if ((bool)arrDesignData[55] == true && ky == 0 && studElement.level == i && (studElement.direction == 'Y' || studElement.direction == 'A')
                                 && jy < (arrStud.Count(n => n.direction == 'Y' && n.level == i) + arrStud.Count(n => n.direction == 'A' && n.level == i)))
                             {
                                 Excel.Worksheet wsMediationY = Application.Worksheets.get_Item("Y-DIR L" + i);
                                 wsMediationY.get_Range("D" + (9 + jy)).Value = studElement.label;
+                            }
+
+                            // Add truss tributary load to matching Y direction stud label on match worksheet if matching report is desired
+                            if ((bool)arrDesignData[55] == true && studElement.level == i && (studElement.direction == 'Y' || studElement.direction == 'A')
+                                && studElement.trussMatches.Any(r => r.trussLabel == trussElement.label))
+                            {
+                                Excel.Worksheet wsMediationY = Application.Worksheets.get_Item("Y-DIR L" + i);
+                                wsMediationY.get_Range("J" + (9 + jy)).Offset[0,ky].Value = (int)(trussElement.length / 2);
+                                // Add cumulative tributary load totals for each stud line
+                                switch ((char)trussElement.label[3])
+                                {
+                                    case 'U':
+                                        wsMediationY.get_Range("F" + (9 + jx)).Value = (wsMediationY.get_Range("F" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationY.get_Range("F" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                    case 'R':
+                                        wsMediationY.get_Range("E" + (9 + jx)).Value = (wsMediationY.get_Range("E" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationY.get_Range("E" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                    case 'B':
+                                        wsMediationY.get_Range("G" + (9 + jx)).Value = (wsMediationY.get_Range("G" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationY.get_Range("G" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                    case 'C':
+                                        wsMediationY.get_Range("H" + (9 + jx)).Value = (wsMediationY.get_Range("H" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationY.get_Range("H" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                    case 'O':
+                                        wsMediationY.get_Range("I" + (9 + jx)).Value = (wsMediationY.get_Range("I" + (9 + jx)).Value == null) ?
+                                            (int)(trussElement.length / 2) :
+                                            (int)wsMediationY.get_Range("I" + (9 + jx)).Value2 + (int)(trussElement.length / 2);
+                                        break;
+                                }
+                            }
+
+                            // Increment stud counters
+                            if ((bool)arrDesignData[55] == true && studElement.level == i && (studElement.direction == 'X' || studElement.direction == 'A'))
+                            {
+                                jx++;
+                            }
+                            if ((bool)arrDesignData[55] == true && studElement.level == i && (studElement.direction == 'Y' || studElement.direction == 'A'))
+                            {
                                 jy++;
                             }
                         }
@@ -1842,6 +1924,9 @@ namespace SCAD
                             wsMediationY.get_Range("J" + 8).Offset[0, ky].Value = trussElement.label;
                             ky++;
                         }
+
+                        // Reset stud counters
+                        jx = 0; jy = 0;
 
                         // Increment progress bar
                         MediationProgress.progressBar.Increment(1);
