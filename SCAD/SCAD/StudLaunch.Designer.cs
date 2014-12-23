@@ -35,7 +35,6 @@
             this.label47 = new System.Windows.Forms.Label();
             this.textBoxIntRatio = new System.Windows.Forms.TextBox();
             this.checkBoxMedArrays = new System.Windows.Forms.CheckBox();
-            this.checkBoxMedSumm = new System.Windows.Forms.CheckBox();
             this.checkBoxVertMatch = new System.Windows.Forms.CheckBox();
             this.checkBoxHorizMatch = new System.Windows.Forms.CheckBox();
             this.label46 = new System.Windows.Forms.Label();
@@ -190,7 +189,6 @@
             this.tabStud.Controls.Add(this.label47);
             this.tabStud.Controls.Add(this.textBoxIntRatio);
             this.tabStud.Controls.Add(this.checkBoxMedArrays);
-            this.tabStud.Controls.Add(this.checkBoxMedSumm);
             this.tabStud.Controls.Add(this.checkBoxVertMatch);
             this.tabStud.Controls.Add(this.checkBoxHorizMatch);
             this.tabStud.Controls.Add(this.label46);
@@ -277,16 +275,6 @@
             this.checkBoxMedArrays.Text = "Show Mediation Input Arrays?";
             this.checkBoxMedArrays.UseVisualStyleBackColor = true;
             // 
-            // checkBoxMedSumm
-            // 
-            this.checkBoxMedSumm.AutoSize = true;
-            this.checkBoxMedSumm.Location = new System.Drawing.Point(215, 409);
-            this.checkBoxMedSumm.Name = "checkBoxMedSumm";
-            this.checkBoxMedSumm.Size = new System.Drawing.Size(154, 17);
-            this.checkBoxMedSumm.TabIndex = 39;
-            this.checkBoxMedSumm.Text = "Show Mediation Summary?";
-            this.checkBoxMedSumm.UseVisualStyleBackColor = true;
-            // 
             // checkBoxVertMatch
             // 
             this.checkBoxVertMatch.AutoSize = true;
@@ -300,12 +288,14 @@
             // checkBoxHorizMatch
             // 
             this.checkBoxHorizMatch.AutoSize = true;
+            this.checkBoxHorizMatch.BackColor = System.Drawing.SystemColors.ControlLight;
             this.checkBoxHorizMatch.Location = new System.Drawing.Point(10, 409);
             this.checkBoxHorizMatch.Name = "checkBoxHorizMatch";
             this.checkBoxHorizMatch.Size = new System.Drawing.Size(156, 17);
             this.checkBoxHorizMatch.TabIndex = 37;
             this.checkBoxHorizMatch.Text = "Show Horizontal Matching?";
-            this.checkBoxHorizMatch.UseVisualStyleBackColor = true;
+            this.checkBoxHorizMatch.UseVisualStyleBackColor = false;
+            this.checkBoxHorizMatch.CheckedChanged += new System.EventHandler(this.checkBoxHorizMatch_CheckedChanged);
             // 
             // label46
             // 
@@ -1708,7 +1698,6 @@
         private System.Windows.Forms.Label label47;
         private System.Windows.Forms.TextBox textBoxIntRatio;
         private System.Windows.Forms.CheckBox checkBoxMedArrays;
-        private System.Windows.Forms.CheckBox checkBoxMedSumm;
         private System.Windows.Forms.CheckBox checkBoxVertMatch;
         private System.Windows.Forms.CheckBox checkBoxHorizMatch;
     }

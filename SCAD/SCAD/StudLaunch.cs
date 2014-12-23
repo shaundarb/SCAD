@@ -93,7 +93,7 @@ namespace SCAD
             arrDesignData[54] = this.textBoxLvl6Ly.Text;
             arrDesignData[55] = this.checkBoxHorizMatch.Checked;
             arrDesignData[56] = this.checkBoxVertMatch.Checked;
-            arrDesignData[57] = this.checkBoxMedSumm.Checked;
+            arrDesignData[57] = false;
             arrDesignData[58] = this.checkBoxMedArrays.Checked;
             arrDesignData[59] = this.textBoxIntRatio.Text;
             arrDesignData[60] = this.checkBoxCompLimit.Checked;
@@ -107,6 +107,11 @@ namespace SCAD
         }
 
         private void label29_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkBoxHorizMatch_CheckedChanged(object sender, EventArgs e)
         {
 
         }

@@ -33,6 +33,7 @@ namespace SCAD
          *                            tfG,            CLLL.         *
          *                           iLC;              fLLL;        *
          *                        :iiLCCCCC         fCCCCCCCCCC     *
+         ************************** SCAD ****************************
          ********* STRUCTURAL CAD ANALYSIS & DESIGN TOOLS ***********
          * Version 2.0                       Release: May 2014      *   
          * Company: SCA Consulting Engineers          © 2014        *
@@ -40,12 +41,13 @@ namespace SCAD
          *          Sugar Land, TX 77478                            *
          ************************************************************
          * Revision History:                                        *
-         * + 2.0 - May 2014, Shaun Smith                            *
+         * + 2.0  May 2014, Shaun Smith                             *
          *      - Migration to C# and .NET framework                *
          *      - Optimizations and Enchancements                   *
          *      - Changed Lateral Reports from printing to PDF      *
          *          creation                                        *
-         *      -                                                   *
+         *      - Removed redundant horizontal matching reports     *
+         *      - Resolved horiz. matching values for Y-dir studs   *
          ************************************************************/
 
 
@@ -739,9 +741,20 @@ namespace SCAD
             this.Application.ScreenUpdating = true;
 
             /************ START STUD MATCHING ROUTINES ************/
+            // Load Progress Bar and set final value
+            SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
+            MediationProgress.Show();
+            MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + arrStud.Count() * 5 + (iLevel - 1) * arrStud.Count() + 42;
+
             // Send arrStud, arrTruss, arrGap to Horizonal Matching Routine
-            HSM_Step1(arrStud, arrTruss, arrGap, arrDesignData, iLevel);
+            HSM(ref arrStud, ref arrTruss, arrDesignData, iLevel, ref MediationProgress);
+
+            // Send arrStud, arrTruss, arrGap to Vertical Matching Routine
+            VSM(ref arrStud, ref arrTruss, arrDesignData, iLevel, ref MediationProgress);
             
+            // Unload Progress Bar
+            MediationProgress.Close();
+
             // Finalize design of stud workbook
             // AutoDesign();
 
@@ -1170,19 +1183,13 @@ namespace SCAD
             }
         }
 
-        // HSM_Step1() -- Handles horizontal matching of stud lines
-        public void HSM_Step1(List<RawLineData> arrStud, List<RawLineData> arrTruss, List<RawLineData> arrGap, Object[] arrDesignData, int iLevel)
+        // HSM_Step1() -- Handles horizontal matching of stud and truss lines
+        public void HSM(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
         {
             // Declarations
             double dIntersect = new double();                           // Used to store intersection of stud and truss line
             int jx = new int(); int jy = new int();                     // Counters to iterate through stud worksheet cells
             int kx = new int(); int ky = new int();                     // Counters to iterate through truss worksheet cells
-                
-
-            // Load Progress Bar and set final value
-            SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
-            MediationProgress.Show();
-            MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + arrStud.Count() * 5 + (iLevel - 1) * arrStud.Count() + 42;
 
             /************ MATCH Y-TRUSSES WITH X-STUD LINES FOR EACH LEVEL ************/
             for (int i = 1; i <= iLevel; i++)
@@ -1349,7 +1356,7 @@ namespace SCAD
                             dIntersect = (trussElement.Yintercept - studElement.Ystart) / (-1 * trussElement.slope);
 
                             // Check to see if truss line falls within limits of the stud line, case is if intersection is negative
-                            if (dIntersect < 0 && studElement.Xstart <= (dIntersect + 1) && studElement.Xend >= (dIntersect - 1)  &&
+                            if (dIntersect < 0 && studElement.Xstart <= (dIntersect + 1) && studElement.Xend >= (dIntersect - 1) &&
                                 trussElement.Ystart >= studElement.Ystart && trussElement.Yend <= studElement.Yend)
                             {
                                 // Assign truss match label, type, and length for stud line
@@ -1547,7 +1554,7 @@ namespace SCAD
                             dIntersect = (studElement.slope * dIntersectX) + studElement.Yintercept;
 
                             // Check if intersection falls within angled stud and truss lines, case is stud slope is NEGATIVE and truss slope is POSITIVE
-                            if (studElement.slope < 0 && trussElement.slope > 0 && (dIntersectX + 1) >= studElement.Xstart && (dIntersectX -1) <= studElement.Xend && 
+                            if (studElement.slope < 0 && trussElement.slope > 0 && (dIntersectX + 1) >= studElement.Xstart && (dIntersectX - 1) <= studElement.Xend &&
                                 (dIntersect - 1) <= studElement.Ystart && (dIntersect + 1) >= studElement.Yend && (dIntersectX + 1) >= trussElement.Xstart &&
                                 (dIntersectX - 1) <= trussElement.Xend && (dIntersect + 1) >= trussElement.Ystart && (dIntersect - 1) <= trussElement.Yend)
                             {
@@ -1812,7 +1819,7 @@ namespace SCAD
                         if (studElement.direction == 'Y' && studElement.level == i && trussElement.direction == 'X' && trussElement.level == i)
                         {
                             // Check to see if truss line falls within limits of the stud line
-                            if ((studElement.Xstart >= trussElement.Xstart) && (studElement.Xstart <= trussElement.Xend) && 
+                            if ((studElement.Xstart >= trussElement.Xstart) && (studElement.Xstart <= trussElement.Xend) &&
                                 (trussElement.Ystart >= studElement.Ystart) && (trussElement.Yend <= studElement.Yend))
                             {
                                 // Assign truss match label, type, and length for stud line
@@ -1999,9 +2006,9 @@ namespace SCAD
                             // Determine intersection of angled stud and Y direction truss
                             dIntersect = (studElement.Yintercept - trussElement.Ystart) / (-1 * studElement.slope);
 
-                            if (((studElement.slope > 0) && (trussElement.Xstart <= dIntersect + 1) && (trussElement.Xend >= dIntersect - 1) && 
+                            if (((studElement.slope > 0) && (trussElement.Xstart <= dIntersect + 1) && (trussElement.Xend >= dIntersect - 1) &&
                                 (trussElement.Ystart >= studElement.Ystart) && (trussElement.Ystart <= studElement.Yend))
-                                || ((studElement.slope < 0) && (trussElement.Xstart <= dIntersect + 1) && (trussElement.Xend >= dIntersect - 1) && 
+                                || ((studElement.slope < 0) && (trussElement.Xstart <= dIntersect + 1) && (trussElement.Xend >= dIntersect - 1) &&
                                 (trussElement.Ystart <= studElement.Ystart) && (trussElement.Ystart >= studElement.Yend)))
                             {
                                 // Assign truss match label, type, and length for stud line
@@ -2071,9 +2078,9 @@ namespace SCAD
                             && studElement.trussMatches.Any(r => r.trussLabel == trussElement.label))
                         {
                             Excel.Worksheet wsMediationX = Application.Worksheets.get_Item("X-DIR L" + i);
-                            wsMediationX.get_Range("J" + (9 + jx)).Offset[0,kx].Value = (int)(trussElement.length / 2);
+                            wsMediationX.get_Range("J" + (9 + jx)).Offset[0, kx].Value = (int)(trussElement.length / 2);
                             // Add cumulative tributary load totals for each stud line
-                            switch((char)trussElement.label[3])
+                            switch ((char)trussElement.label[3])
                             {
                                 case 'U':
                                     wsMediationX.get_Range("F" + (9 + jx)).Value = (wsMediationX.get_Range("F" + (9 + jx)).Value == null) ?
@@ -2115,7 +2122,7 @@ namespace SCAD
                             && studElement.trussMatches.Any(r => r.trussLabel == trussElement.label))
                         {
                             Excel.Worksheet wsMediationY = Application.Worksheets.get_Item("Y-DIR L" + i);
-                            wsMediationY.get_Range("J" + (9 + jy)).Offset[0,ky].Value = (int)(trussElement.length / 2);
+                            wsMediationY.get_Range("J" + (9 + jy)).Offset[0, ky].Value = (int)(trussElement.length / 2);
                             // Add cumulative tributary load totals for each stud line
                             switch ((char)trussElement.label[3])
                             {
@@ -2162,7 +2169,7 @@ namespace SCAD
                     if ((bool)arrDesignData[55] == true && trussElement.level == i && (trussElement.direction == 'Y' || trussElement.direction == 'A'))
                     {
                         Excel.Worksheet wsMediationX = Application.Worksheets.get_Item("X-DIR L" + i);
-                        wsMediationX.get_Range("J" + 8).Offset[0,kx].Value = trussElement.label;
+                        wsMediationX.get_Range("J" + 8).Offset[0, kx].Value = trussElement.label;
                         kx++;
                     }
 
@@ -2175,15 +2182,39 @@ namespace SCAD
                     }
 
                     // Reset stud counters
-                    jx = 0; jy = 0;
+                    if ((bool)arrDesignData[55] == true)
+                    {
+                        jx = 0;
+                        jy = 0;
+                    }
 
                     // Increment progress bar
                     MediationProgress.progressBar.Increment(1);
                 }
+
+                // Resize colums on matching reports
+                if ((bool)arrDesignData[55] == true)
+                {
+                    Excel.Worksheet wsMediation = Application.Worksheets.get_Item("X-DIR L" + i);
+                    wsMediation.get_Range("A1", "NN1").EntireColumn.AutoFit();
+                    wsMediation = Application.Worksheets.get_Item("Y-DIR L" + i);
+                    wsMediation.get_Range("A1", "NN1").EntireColumn.AutoFit();
+                }
             }
         return;
         }
-        
+
+        // VSM_Step1() -- Handles vertical matching of stud and truss lines
+        public void VSM(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
+        {
+            try
+            {
+
+            }
+            catch (Exception e) { MessageBox.Show(e.Message); }
+            return;
+        }
+
         // StudExport() -- Creates an AutoCAD script file of Stud Design.
         public string StudExport()
         {
