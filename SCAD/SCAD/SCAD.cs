@@ -741,7 +741,7 @@ namespace SCAD
 
             /************ FORMAT LEVEL-SPECIFIC CALC TABLES ************/
             // Format workbook for level-specific calc tables
-            SCADBuild(arrDesignData, arrStud.Count(), iLevel);          
+            SCADBuild(arrDesignData, arrStud, iLevel);          
 
             // Reactivate Screen Updating after sorting
             this.Application.ScreenUpdating = true;
@@ -750,29 +750,40 @@ namespace SCAD
             // Load Progress Bar and set final value
             SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
             MediationProgress.Show();
-            MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + arrStud.Count() * 5 + (iLevel - 1) * arrStud.Count() + 42;
+            MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + (arrStud.Count() * 5) + ((iLevel - 1) * arrStud.Count());
 
             // Send arrStud, arrTruss to Horizonal Matching Routine
             HSM(ref arrStud, ref arrTruss, arrDesignData, iLevel, ref MediationProgress);
 
             // Send arrStud, arrTruss, arrGap to Vertical Matching Routine
             VSM(ref arrStud, ref arrTruss, arrGap, arrDesignData, iLevel, ref MediationProgress);
-            
+                        
+            // Finalize design of stud workbook
+            AutoDesign(ref arrStud, ref arrTruss, arrDesignData, iLevel, ref MediationProgress);
+
             // Unload Progress Bar
             MediationProgress.Close();
-
-            // Finalize design of stud workbook
-            // AutoDesign();
 
             return;
         }
 
         // SCADBuild() -- Creates calc worksheets for each level in the Stud Design Workbook.
-        public void SCADBuild(object[] arrDesignData, int iStud, int iLevel)
+        public void SCADBuild(object[] arrDesignData, List<RawLineData> arrStud, int iLevel)
         {
+            /* SCADBuild() -- called from DataSort() after data has been sorted.
+             * Responsible for the initial creation and design of the stud level calculation
+             * worksheets in the Stud Design Workbook. Design Data is also populated on
+             * Input worksheet.*/
+
+            // Declarations
+            int levelCount;     // Stores number of studs on particular level
+            
             // Loop through each level to create a new calc table for that floor
             for (int i = 1; i <= iLevel; i++)
             {
+                // Store number of studs on this level
+                levelCount = arrStud.Count(n => n.level == i);
+
                 // Create new calc table worksheet and format it
                 Excel.Worksheet wsCalcTable = (Excel.Worksheet)this.Application.Worksheets.Add();
                 wsCalcTable.Name = "L" + i + " Calc Table";
@@ -781,7 +792,7 @@ namespace SCAD
 
                 // Freeze the header row
                 ((Excel._Worksheet)wsCalcTable).Activate();
-                wsCalcTable.Application.ActiveWindow.SplitRow = 6;
+                wsCalcTable.Application.ActiveWindow.SplitRow = 5;
                 wsCalcTable.Application.ActiveWindow.FreezePanes = true;
 
                 // Populate header titles
@@ -849,6 +860,163 @@ namespace SCAD
                 wsCalcTable.get_Range("BD5").Value = "Start Y";
                 wsCalcTable.get_Range("BE5").Value = "End X";
                 wsCalcTable.get_Range("BF5").Value = "End Y";
+
+                // Populate Drop Downs
+                wsCalcTable.get_Range("B4").Validation.Add(Excel.XlDVType.xlValidateList, Type.Missing,
+                    Excel.XlFormatConditionOperator.xlBetween, Formula1: "=YN");
+                wsCalcTable.get_Range("B4").Validation.ShowInput = true;
+                wsCalcTable.get_Range("B4").Validation.InCellDropdown = true;
+                wsCalcTable.get_Range("B4").Validation.IgnoreBlank = false;
+                for (int m = 0; m < levelCount; m++)
+                {
+                    wsCalcTable.get_Range("AB" + (6 + m)).Validation.Add(Excel.XlDVType.xlValidateList, Type.Missing,
+                        Excel.XlFormatConditionOperator.xlBetween, Formula1: "=YN");
+                    wsCalcTable.get_Range("AB" + (6 + m)).Validation.ShowInput = true;
+                    wsCalcTable.get_Range("AB" + (6 + m)).Validation.InCellDropdown = true;
+                    wsCalcTable.get_Range("AB" + (6 + m)).Validation.IgnoreBlank = false;
+                }
+                for (int m = 0; m < levelCount; m++)
+                {
+                    wsCalcTable.get_Range("A" + (6 + m)).Validation.Add(Excel.XlDVType.xlValidateList, Type.Missing,
+                        Excel.XlFormatConditionOperator.xlBetween, Formula1: "=YN");
+                    wsCalcTable.get_Range("A" + (6 + m)).Validation.ShowInput = true;
+                    wsCalcTable.get_Range("A" + (6 + m)).Validation.InCellDropdown = true;
+                    wsCalcTable.get_Range("A" + (6 + m)).Validation.IgnoreBlank = false;
+                }
+
+
+                // Modify cell appearance of workbook
+                wsCalcTable.get_Range("B4").Interior.Pattern = Excel.XlPattern.xlPatternSolid;
+                wsCalcTable.get_Range("B4").Interior.PatternColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                wsCalcTable.get_Range("B4").Interior.ThemeColor = Excel.XlThemeColor.xlThemeColorLight2;
+                wsCalcTable.get_Range("B4").Interior.TintAndShade = 0.6;
+                wsCalcTable.get_Range("A6", "A" + (5 + levelCount)).Interior.Pattern = Excel.XlPattern.xlPatternSolid;
+                wsCalcTable.get_Range("A6", "A" + (5 + levelCount)).Interior.PatternColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                wsCalcTable.get_Range("A6", "A" + (5 + levelCount)).Interior.ThemeColor = Excel.XlThemeColor.xlThemeColorLight2;
+                wsCalcTable.get_Range("A6", "A" + (5 + levelCount)).Interior.TintAndShade = 0.6;
+                wsCalcTable.get_Range("AB6", "AB" + (5 + levelCount)).Interior.Pattern = Excel.XlPattern.xlPatternSolid;
+                wsCalcTable.get_Range("AB6", "AB" + (5 + levelCount)).Interior.PatternColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                wsCalcTable.get_Range("AB6", "AB" + (5 + levelCount)).Interior.ThemeColor = Excel.XlThemeColor.xlThemeColorLight2;
+                wsCalcTable.get_Range("AB6", "AB" + (5 + levelCount)).Interior.TintAndShade = 0.6;
+                wsCalcTable.get_Range("A5").RowHeight = 31.5;
+                wsCalcTable.get_Range("J4", "N4").Merge();
+                wsCalcTable.get_Range("P4", "Y4").Merge();
+                wsCalcTable.get_Range("AS4", "BB4").Merge();
+                wsCalcTable.get_Range("AS4", "BB4").WrapText = true;
+                wsCalcTable.get_Range("A5", "BB5").WrapText = true;
+                wsCalcTable.get_Range("J4", "BF4").HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter;
+                wsCalcTable.get_Range("A5", "BF" + (5 + levelCount)).HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter;
+                wsCalcTable.get_Range("A5", "BF" + (5 + levelCount)).VerticalAlignment = Excel.XlVAlign.xlVAlignBottom;
+                wsCalcTable.get_Range("A6", "BF" + (5 + levelCount)).WrapText = false;
+                wsCalcTable.get_Range("A5", "BF" + (5 + levelCount)).Orientation = 0;
+                wsCalcTable.get_Range("A5", "BF" + (5 + levelCount)).AddIndent = false;
+                wsCalcTable.get_Range("A5", "BF" + (5 + levelCount)).IndentLevel = 0;
+                wsCalcTable.get_Range("A5", "BF" + (5 + levelCount)).ShrinkToFit = false;
+                wsCalcTable.get_Range("D6", "I" + (5 + levelCount)).Interior.Pattern = Excel.XlPattern.xlPatternSolid;
+                wsCalcTable.get_Range("D6", "I" + (5 + levelCount)).Interior.PatternColorIndex = 1;
+                wsCalcTable.get_Range("D6", "I" + (5 + levelCount)).Interior.Color = 13434879;
+                wsCalcTable.get_Range("O6", "O" + (5 + levelCount)).Interior.Pattern = Excel.XlPattern.xlPatternSolid;
+                wsCalcTable.get_Range("O6", "O" + (5 + levelCount)).Interior.PatternColorIndex = 1;
+                wsCalcTable.get_Range("O6", "O" + (5 + levelCount)).Interior.Color = 13434879;
+                wsCalcTable.get_Range("Z6", "AA" + (5 + levelCount)).Interior.Pattern = Excel.XlPattern.xlPatternSolid;
+                wsCalcTable.get_Range("Z6", "AA" + (5 + levelCount)).Interior.PatternColorIndex = 1;
+                wsCalcTable.get_Range("Z6", "AA" + (5 + levelCount)).Interior.Color = 13434879;
+                wsCalcTable.get_Range("H2").Interior.Pattern = Excel.XlPattern.xlPatternSolid;
+                wsCalcTable.get_Range("H2").Interior.PatternColorIndex = 1;
+                wsCalcTable.get_Range("H2").Interior.Color = 13434879;
+                wsCalcTable.get_Range("G2").HorizontalAlignment = Excel.XlHAlign.xlHAlignRight;
+                wsCalcTable.get_Range("G2").VerticalAlignment = Excel.XlVAlign.xlVAlignBottom;
+                wsCalcTable.get_Range("D2").HorizontalAlignment = Excel.XlHAlign.xlHAlignRight;
+                wsCalcTable.get_Range("D2").VerticalAlignment = Excel.XlVAlign.xlVAlignBottom;
+                wsCalcTable.get_Range("A1").ColumnWidth = 11.88;
+                wsCalcTable.get_Range("B1").ColumnWidth = 20.75;
+                wsCalcTable.get_Range("C1").ColumnWidth = 6.63;
+                wsCalcTable.get_Range("D1").ColumnWidth = 6;
+                wsCalcTable.get_Range("E1").ColumnWidth = 11.25;
+                wsCalcTable.get_Range("F1").ColumnWidth = 14;
+                wsCalcTable.get_Range("G1").ColumnWidth = 10.75;
+                wsCalcTable.get_Range("H1").ColumnWidth = 6.75;
+                wsCalcTable.get_Range("I1").ColumnWidth = 6.63;
+                wsCalcTable.get_Range("J1", "N1").ColumnWidth = 6.75;
+                wsCalcTable.get_Range("O1").ColumnWidth = 11.63;
+                wsCalcTable.get_Range("P1", "Y1").ColumnWidth = 6.25;
+                wsCalcTable.get_Range("Z1", "AA1").ColumnWidth = 15.5;
+                wsCalcTable.get_Range("AB1").ColumnWidth = 7.25;
+                wsCalcTable.get_Range("AC1").ColumnWidth = 7;
+                wsCalcTable.get_Range("AE1").ColumnWidth = 6.75;
+                wsCalcTable.get_Range("AD1").ColumnWidth = 7;
+                wsCalcTable.get_Range("AF1", "AH1").ColumnWidth = 11.13;
+                wsCalcTable.get_Range("AI1", "AJ1").ColumnWidth = 9.5;
+                wsCalcTable.get_Range("AS1", "BB1").ColumnWidth = 8.38;
+
+                // Add Conditional Formatting
+                Excel.FormatCondition unityCheckNG = (Excel.FormatCondition)wsCalcTable.get_Range("AK6", "AP" + (5 + levelCount)).FormatConditions.Add(
+                    Type: Excel.XlFormatConditionType.xlExpression, Formula1: "=AK6=\"N.G.\"");
+                unityCheckNG.Font.Bold = true;
+                unityCheckNG.Font.Color = -16383844;
+                unityCheckNG.StopIfTrue = false;
+                Excel.FormatCondition unityCheckOK = (Excel.FormatCondition)wsCalcTable.get_Range("AK6", "AP" + (5 + levelCount)).FormatConditions.Add(
+                    Type: Excel.XlFormatConditionType.xlExpression, Formula1: "=AK6=\"O.K.\"");
+                unityCheckOK.Font.Bold = true;
+                unityCheckOK.Font.Color = -11489280;
+                unityCheckOK.StopIfTrue = false;
+                Excel.FormatCondition unityCheckConfirm = (Excel.FormatCondition)wsCalcTable.get_Range("AK6", "AP" + (5 + levelCount)).FormatConditions.Add(
+                    Type: Excel.XlFormatConditionType.xlExpression, Formula1: "=AK6=\"Confirm\"");
+                unityCheckConfirm.Font.Bold = true;
+                unityCheckConfirm.Font.TintAndShade = 0;
+                unityCheckConfirm.Interior.Color = 65535;
+                unityCheckConfirm.Interior.TintAndShade = 0;
+                unityCheckConfirm.Interior.PatternColorIndex = 1;
+                unityCheckConfirm.StopIfTrue = false;
+
+
+                // Add Borders for aesthetic
+                wsCalcTable.get_Range("A5", "A" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("A5", "A" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("B5", "B" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("B5", "B" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("C5", "C" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("C5", "C" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("I5", "I" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("I5", "I" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("N5", "N" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("N5", "N" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("O5", "O" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("O5", "O" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("Y5", "Y" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("Y5", "Y" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("AA5", "AA" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("AA5", "AA" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("AE5", "AE" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("AE5", "AE" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("AK5", "AK" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("AK5", "AK" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("AP5", "AP" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("AP5", "AP" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("AR5", "AR" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("AR5", "AR" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("BB5", "BB" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("BB5", "BB" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("BF5", "BF" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("BF5", "BF" + (levelCount + 5)).Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("B2", "B4").Borders.LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("B2", "B4").Borders.Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("E2", "E3").Borders.LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("E2", "E3").Borders.Weight = Excel.XlBorderWeight.xlThin;
+                wsCalcTable.get_Range("H2").Borders.LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsCalcTable.get_Range("H2").Borders.Weight = Excel.XlBorderWeight.xlThin;
+
+                // Adjust Font
+                wsCalcTable.Cells.Font.Name = "Calibri";
+                wsCalcTable.Cells.Font.Size = 12;
+                wsCalcTable.Cells.Font.ThemeFont = Excel.XlThemeFont.xlThemeFontMinor;
+                wsCalcTable.get_Range("J6", "N" + (5 + levelCount)).Font.Color = -65536;
+                wsCalcTable.get_Range("B6", "C" + (5 + levelCount)).Font.Color = -65536;
+                wsCalcTable.get_Range("J6", "N" + (5 + levelCount)).NumberFormat = "0.0";
+                wsCalcTable.get_Range("P6", "Y" + (5 + levelCount)).NumberFormat = "0";
+                wsCalcTable.get_Range("AF6", "AH" + (5 + levelCount)).NumberFormat = "0.00";
+                wsCalcTable.get_Range("AI6", "AI" + (5 + levelCount)).NumberFormat = "0";
+                wsCalcTable.get_Range("AS6", "BB" + (5 + levelCount)).NumberFormat = "0";
             }
 
             // Adds level specific checks to Calc Tables
@@ -1006,6 +1174,13 @@ namespace SCAD
         // Arrays() -- Creates optional worksheet for all of the sorted raw data
         public void Arrays(List<RawLineData> arrSorted, List<RawLineData> arrDiaphr, List<RawLineData> arrGap, List<RawLineData> arrShear, List<RawLineData> arrTruss, List<RawLineData> arrStud, List<RawLineData> arrBeam)
         {
+            /* Arrays() -- called from DataSort() after data has been sorted.
+             * Creates an optional worksheet that displays all of the arrays that have
+             * been created from the raw data after it has been sorted and classified.
+             * This is to debug any potential mismatch or confusion of particular 
+             * lines or values. The checkbox "Show Mediation Input Arrays?" on the Stud Launch
+             * form calls this particular function.*/
+
             // Create new Array worksheet to output lines
             Excel.Worksheet wsArrays = (Excel.Worksheet)this.Application.Worksheets.Add();
             wsArrays.Name = "Arrays";
@@ -1200,10 +1375,17 @@ namespace SCAD
         // HSM() -- Handles horizontal matching of stud and truss lines
         public void HSM(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
         {
+            /* HSM() -- called from DataSort() after raw data has been sorted.
+             * This function takes the Stud data array and matches it with truss lines that
+             * intersect stud walls horizontally on the same level. The matched truss
+             * label and length values are appended to that stud line in a matched
+             * truss list that is defined in the RawLineData object type. The arrays
+             * are treated through references to increase processing speed.*/
+
             // Declarations
-            double dIntersect = new double();                           // Used to store intersection of stud and truss line
-            int studX = new int(); int studY = new int();                     // Counters to iterate through stud worksheet cells
-            int trussX = new int(); int trussY = new int();                     // Counters to iterate through truss worksheet cells
+            double dIntersect = new double();                             // Used to store intersection of stud and truss line
+            int studX = new int(); int studY = new int();                 // Counters to iterate through stud worksheet cells
+            int trussX = new int(); int trussY = new int();               // Counters to iterate through truss worksheet cells
 
             /************ MATCH Y-TRUSSES WITH X-STUD LINES FOR EACH LEVEL ************/
             for (int i = 1; i <= iLevel; i++)
@@ -2221,258 +2403,364 @@ namespace SCAD
         // VSM() -- Handles vertical matching of stud and truss lines of multiple floors
         public void VSM(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, List<RawLineData> arrGap, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
         {
-            try
+            /* VSM() -- called from DataSort() after raw data has been sorted.
+             * This function takes the Stud data array and matches it with stud lines that
+             * intersect stud walls vertically on the above levels. The matched stud
+             * label is appended to that stud line in the matched stud variable. The arrays
+             * are treated through references to increase processing speed.*/
+
+            // Declarations
+            int upperStud = 0; int lowerStud = 0;       // Counters to iterate through matching worksheet columns and rows
+
+            /* Begin cycling through levels to match beginning with level 2) */
+            for (int i = 2; i <= iLevel; i++)
             {
-                // Declarations
-                int upperStud = 0; int lowerStud = 0;       // Counters to iterate through matching worksheet columns and rows
-
-                /* Begin cycling through levels to match beginning with level 2) */
-                for (int i = 2; i <= iLevel; i++)
+                if ((bool)arrDesignData[56] == true)
                 {
-                    if ((bool)arrDesignData[56] == true)
-                    {
-                        // Create new worksheets for stud matching level combinations (eg 2/1, 3/2, 4/3, etc)
-                        Excel.Worksheet wsVMatch = this.Application.Worksheets.Add();
-                        wsVMatch.Name = "STUD " + i + "," + (i - 1);
-                        wsVMatch.Tab.ThemeColor = Excel.XlThemeColor.xlThemeColorAccent2;
-                        wsVMatch.Tab.TintAndShade = 0.4;
-                        wsVMatch.get_Range("D9").EntireColumn.Activate();
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
-                        wsVMatch.get_Range("C8").EntireRow.Activate();
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
-                        wsVMatch.get_Range("D7", "D8").Activate();
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
-                        this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
+                    // Create new worksheets for stud matching level combinations (eg 2/1, 3/2, 4/3, etc)
+                    Excel.Worksheet wsVMatch = this.Application.Worksheets.Add();
+                    wsVMatch.Name = "STUD " + i + "," + (i - 1);
+                    wsVMatch.Tab.ThemeColor = Excel.XlThemeColor.xlThemeColorAccent2;
+                    wsVMatch.Tab.TintAndShade = 0.4;
+                    wsVMatch.get_Range("D9").EntireColumn.Activate();
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                    wsVMatch.get_Range("C8").EntireRow.Activate();
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).ColorIndex = Excel.XlColorIndex.xlColorIndexAutomatic;
+                    wsVMatch.get_Range("D7", "D8").Activate();
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).LineStyle = Excel.XlLineStyle.xlContinuous;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeBottom).Weight = Excel.XlBorderWeight.xlThin;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).LineStyle = Excel.XlLineStyle.xlContinuous;
+                    this.Application.Selection.Borders(Excel.XlBordersIndex.xlEdgeRight).Weight = Excel.XlBorderWeight.xlThin;
 
-                        // Populate headers
-                        wsVMatch.get_Range("B2").Value = "LEVEL " + i + " to " + (i - 1) + " STUD LINES MATCHING";
-                        wsVMatch.get_Range("B2").Font.Bold = true;
-                        wsVMatch.get_Range("B2").Font.Name = "Arial";
-                        wsVMatch.get_Range("B2").Font.Size = 12;
-                        wsVMatch.get_Range("B3").Value = "Level " + (i - 1) + " Stud Count:";
-                        wsVMatch.get_Range("B4").Value = "Level " + i + " Stud Count:";
-                        wsVMatch.get_Range("C3").Value = arrStud.Count(n => n.level == (i-1));
-                        wsVMatch.get_Range("C4").Value = arrStud.Count(n => n.level == i);
-                        wsVMatch.get_Range("D7").Value = "LEVEL " + (i - 1) + " STUD LINES";
-                        wsVMatch.get_Range("C8").Value = "LEVEL " + i + " STUD LINES";
-                        wsVMatch.get_Range("A1", "NN1").EntireColumn.AutoFit();
+                    // Populate headers
+                    wsVMatch.get_Range("B2").Value = "LEVEL " + i + " to " + (i - 1) + " STUD LINES MATCHING";
+                    wsVMatch.get_Range("B2").Font.Bold = true;
+                    wsVMatch.get_Range("B2").Font.Name = "Arial";
+                    wsVMatch.get_Range("B2").Font.Size = 12;
+                    wsVMatch.get_Range("B3").Value = "Level " + (i - 1) + " Stud Count:";
+                    wsVMatch.get_Range("B4").Value = "Level " + i + " Stud Count:";
+                    wsVMatch.get_Range("C3").Value = arrStud.Count(n => n.level == (i-1));
+                    wsVMatch.get_Range("C4").Value = arrStud.Count(n => n.level == i);
+                    wsVMatch.get_Range("D7").Value = "LEVEL " + (i - 1) + " STUD LINES";
+                    wsVMatch.get_Range("C8").Value = "LEVEL " + i + " STUD LINES";
+                    wsVMatch.get_Range("A1", "NN1").EntireColumn.AutoFit();
+                }
+
+                // Increment progress bar
+                MediationProgress.progressBar.Increment(1);
+
+                /********* VERTICAL MATCHING ********/
+                // Begin cycling through each stud element to check if lower level studs match current level studs by matching length and start gap (within threshold)
+                upperStud = 0;           // Reset upper stud counters
+                foreach (RawLineData upperStudElement in arrStud)
+                {
+                    // Check if stud element is on current level, then cycle through stud elements again to match with level below
+                    if (upperStudElement.level == i)
+                    {
+                        if ((bool)arrDesignData[56] == true)
+                        {
+                            Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
+                            wsVmatch.get_Range("E8").Offset[0, upperStud].Value = upperStudElement.label;
+                        }
+
+                        lowerStud = 0;  // Reset lower stud counter
+                        foreach(RawLineData lowerStudElement in arrStud)
+                        {
+                            if (lowerStudElement.level == (i - 1))
+                            {
+                                /* Matching Y-direction studs */
+                                if (lowerStudElement.direction == 'Y' && upperStudElement.direction == 'Y' &&
+                                    upperStudElement.Xstart <= (lowerStudElement.Xstart + 1) &&
+                                    upperStudElement.Xstart >= (lowerStudElement.Xstart - 1))
+                                {
+                                    // Check Lengths and Start Gap Lengths to verify if they are matching
+                                    if ((upperStudElement.length <= (lowerStudElement.length + 1)) && (upperStudElement.length >= (lowerStudElement.length - 1)) &&
+                                        upperStudElement.startGapLength <= (lowerStudElement.startGapLength + 1) && upperStudElement.startGapLength >= 
+                                        (lowerStudElement.startGapLength - 1))
+                                    {
+                                        // Add upper stud match label to lower stud element 
+                                        lowerStudElement.studMatch = upperStudElement.label;
+                                           
+                                        // Add item to worksheet if matched (if report is desired)
+                                        if ((bool)arrDesignData[56] == true)
+                                        {
+                                            Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
+                                            wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
+                                            wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
+                                            wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
+                                            int trib = 0;
+                                            foreach (trussMatch truss in upperStudElement.trussMatches)
+                                            {
+                                                trib += truss.trussLength;
+                                            }
+                                            wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
+                                        }
+                                    }
+
+                                    // If lengths are not equal, check gap differences to verify if they are collinear on different levels
+                                    if (upperStudElement.length > lowerStudElement.length && 
+                                        Math.Abs(arrGap[i-1].Ystart - upperStudElement.Ystart) >= Math.Abs(arrGap[i - 2].Ystart - lowerStudElement.Ystart) && 
+                                        Math.Abs(arrGap[i - 1].Ystart - upperStudElement.Yend) >= Math.Abs(arrGap[i - 2].Ystart - lowerStudElement.Yend))
+                                    {
+                                        // Add upper stud match label to lower stud element 
+                                        lowerStudElement.studMatch = upperStudElement.label;
+
+                                        // Add item to worksheet if matched (if report is desired)
+                                        if ((bool)arrDesignData[56] == true)
+                                        {
+                                            Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
+                                            wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
+                                            wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
+                                            wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
+                                            int trib = 0;
+                                            foreach (trussMatch truss in lowerStudElement.trussMatches)
+                                            {
+                                                trib += truss.trussLength;
+                                            }
+                                            wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
+                                        }
+                                    }
+                                }
+
+                                /* Matching X-direction studs */
+                                if (lowerStudElement.direction == 'X' && upperStudElement.direction == 'X' &&
+                                    (arrGap[i - 1].Ystart - arrGap[i - 2].Ystart) >= (upperStudElement.Ystart - (lowerStudElement.Ystart + 1)) &&
+                                    (arrGap[i - 1].Ystart - arrGap[i - 2].Ystart) <= (upperStudElement.Ystart - (lowerStudElement.Ystart - 1)))
+                                {
+                                    // Check Lengths, Gap Start Lengths, X-Start to verify they are matching
+                                    if (upperStudElement.length <= (lowerStudElement.length + 1) && upperStudElement.length >= (lowerStudElement.length - 1) &&
+                                        upperStudElement.Xstart <= (lowerStudElement.Xstart + 1) && upperStudElement.Xstart >= (lowerStudElement.Xstart - 1))
+                                    {
+                                        // Add upper stud match label to lower stud element 
+                                        lowerStudElement.studMatch = upperStudElement.label;
+
+                                        // Add item to worksheet if matched (if report is desired)
+                                        if ((bool)arrDesignData[56] == true)
+                                        {
+                                            Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
+                                            wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
+                                            wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
+                                            wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
+                                            int trib = 0;
+                                            foreach (trussMatch truss in upperStudElement.trussMatches)
+                                            {
+                                                trib += truss.trussLength;
+                                            }
+                                            wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
+                                        }
+                                    }
+
+                                    // If lengths are not equal, check X start/end differences to verify if they are collinear on different levels
+                                    if (upperStudElement.length > lowerStudElement.length && upperStudElement.Xstart <= lowerStudElement.Xstart &&
+                                        upperStudElement.Xend >= lowerStudElement.Xend)
+                                    {
+                                        // Add upper stud match label to lower stud element 
+                                        lowerStudElement.studMatch = upperStudElement.label;
+
+                                        // Add item to worksheet if matched (if report is desired)
+                                        if ((bool)arrDesignData[56] == true)
+                                        {
+                                            Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
+                                            wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
+                                            wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
+                                            wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
+                                            int trib = 0;
+                                            foreach (trussMatch truss in upperStudElement.trussMatches)
+                                            {
+                                                trib += truss.trussLength;
+                                            }
+                                            wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
+                                        }
+                                    }
+                                }
+
+                                /* Matching Angled direction studs */
+                                if (lowerStudElement.direction == 'A' && upperStudElement.direction == 'A')
+                                {
+                                    // Check Slope, lengths, Gap Start and X Start to verify they are matching
+                                    if (upperStudElement.slope <= (lowerStudElement.slope + 1) && upperStudElement.slope >= (lowerStudElement.slope - 1) &&  
+                                        upperStudElement.length <= (lowerStudElement.length + 1) && upperStudElement.length >= (lowerStudElement.length - 1) &&
+                                        upperStudElement.startGapLength <= (lowerStudElement.startGapLength + 1) && upperStudElement.startGapLength >= (lowerStudElement.startGapLength - 1) &&
+                                        upperStudElement.Xstart <= (lowerStudElement.Xstart + 1) && upperStudElement.Xstart >= (lowerStudElement.Xstart - 1))
+                                    {
+                                        // Add upper stud match label to lower stud element 
+                                        lowerStudElement.studMatch = upperStudElement.label;
+
+                                        // Add item to worksheet if matched (if report is desired)
+                                        if ((bool)arrDesignData[56] == true)
+                                        {
+                                            Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
+                                            wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
+                                            wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
+                                            wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
+                                            int trib = 0;
+                                            foreach (trussMatch truss in upperStudElement.trussMatches)
+                                            {
+                                                trib += truss.trussLength;
+                                            }
+                                            wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
+                                        }
+                                    }
+
+                                    // If lengths are not equal, check gap differences, Xstarts and slopes to verify if they are collinear on different levels
+                                    if (upperStudElement.length != lowerStudElement.length && upperStudElement.slope <= (lowerStudElement.slope + 1) && upperStudElement.slope >= (lowerStudElement.slope - 1) &&
+                                        upperStudElement.Xstart <= lowerStudElement.Xstart && upperStudElement.Xend >= lowerStudElement.Xend && 
+                                        (upperStudElement.Yintercept - arrGap[i-1].Ystart) == (lowerStudElement.Yintercept - arrGap[i-2].Ystart))
+                                    {
+                                        // Add upper stud match label to lower stud element 
+                                        lowerStudElement.studMatch = upperStudElement.label;
+
+                                        // Add item to worksheet if matched (if report is desired)
+                                        if ((bool)arrDesignData[56] == true)
+                                        {
+                                            Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
+                                            wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
+                                            wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
+                                            wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
+                                            int trib = 0;
+                                            foreach (trussMatch truss in upperStudElement.trussMatches)
+                                            {
+                                                trib += truss.trussLength;
+                                            }
+                                            wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
+                                        }
+                                    }
+                                }
+
+                                // Increment lower stud element counter
+                                lowerStud++;
+                            }
+                        }
+
+                        // Increment upper stud counter (for worksheet reporting)
+                        upperStud++;
                     }
 
                     // Increment progress bar
                     MediationProgress.progressBar.Increment(1);
+                }
 
-                    /********* VERTICAL MATCHING ********/
-                    // Begin cycling through each stud element to check if lower level studs match current level studs by matching length and start gap (within threshold)
-                    upperStud = 0;           // Reset upper stud counters
-                    foreach (RawLineData upperStudElement in arrStud)
+                // AutoFit the matching worksheet and add lower level stud labels (if report is requested)
+                if ((bool)arrDesignData[56] == true)
+                {
+                    Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
+                    lowerStud = 0;
+                    foreach (RawLineData lowerStudElement in arrStud)
                     {
-                        // Check if stud element is on current level, then cycle through stud elements again to match with level below
-                        if (upperStudElement.level == i)
+                        // Add stud labels for lower level in column
+                        if (lowerStudElement.level == (i - 1))
                         {
-                            if ((bool)arrDesignData[56] == true)
-                            {
-                                Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
-                                wsVmatch.get_Range("E8").Offset[0, upperStud].Value = upperStudElement.label;
-                            }
+                            wsVmatch.get_Range("D" + (9 + lowerStud)).Value = lowerStudElement.label;
+                            lowerStud++;
+                        }
+                    }
+                    wsVmatch.get_Range("A1", "NN1").EntireColumn.AutoFit();
+                }
+            }
+        return;
+        }
 
-                            lowerStud = 0;  // Reset lower stud counter
-                            foreach(RawLineData lowerStudElement in arrStud)
+        // AutoDesign() -- Designs and completes the stud calculation tables to complete mediation routine
+        public void AutoDesign(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
+        {
+            /* AutoDesign() -- Called from DataSort() after vertical and horizontal
+             * matching routines are completed. This function handles population of 
+             * the stud calc table data in the Stud Design Workbook. After this
+             * step is complete, the scheduling parameters are then determined.*/
+            
+            try
+            {
+                // Declarations
+                int j;          // Used to iterate through calc table rows
+                int levelCount; // Stores the number of studs on a current level
+
+                // Cycle through levels to handle population of each level's calc table
+                for (int i = 1; i <= iLevel; i++)
+                {
+                    levelCount = arrStud.Count(n => n.level == i);
+
+                    /**** Input level specific design data to worksheet ****/
+                    Excel.Worksheet wsCalcTable = Application.Worksheets.get_Item("L" + i + " Calc Table");
+                    wsCalcTable.get_Range("H2").Value = arrDesignData[3 + i];
+                    wsCalcTable.get_Range("A4").Value = "Print All?";
+
+                    /**** Begin populating individual stud data to worksheet ****/
+                    j = 0;
+                    foreach (RawLineData studElement in arrStud)
+                    {
+                        if (studElement.level == i)
+                        {
+                            wsCalcTable.get_Range("B" + (6 + j)).Value = studElement.label;
+                            wsCalcTable.get_Range("C" + (6 + j)).Value = studElement.studClass.ToString();
+                            wsCalcTable.get_Range("E" + (6 + j)).Value = studElement.studThickness;
+                            // Stud Species
                             {
-                                if (lowerStudElement.level == (i - 1))
+                                if (studElement.studClass == 'I' && studElement.level < iLevel)
                                 {
-                                    /* Matching Y-direction studs */
-                                    if (lowerStudElement.direction == 'Y' && upperStudElement.direction == 'Y' &&
-                                        upperStudElement.Xstart <= (lowerStudElement.Xstart + 1) &&
-                                        upperStudElement.Xstart >= (lowerStudElement.Xstart - 1))
-                                    {
-                                        // Check Lengths and Start Gap Lengths to verify if they are matching
-                                        if ((upperStudElement.length <= (lowerStudElement.length + 1)) && (upperStudElement.length >= (lowerStudElement.length - 1)) &&
-                                            upperStudElement.startGapLength <= (lowerStudElement.startGapLength + 1) && upperStudElement.startGapLength >= 
-                                            (lowerStudElement.startGapLength - 1))
-                                        {
-                                            // Add upper stud match label to lower stud element 
-                                            lowerStudElement.studMatch = upperStudElement.label;
-                                           
-                                            // Add item to worksheet if matched (if report is desired)
-                                            if ((bool)arrDesignData[56] == true)
-                                            {
-                                                Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
-                                                wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
-                                                wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
-                                                wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
-                                                int trib = 0;
-                                                foreach (trussMatch truss in upperStudElement.trussMatches)
-                                                {
-                                                    trib += truss.trussLength;
-                                                }
-                                                wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
-                                            }
-                                        }
-
-                                        // If lengths are not equal, check gap differences to verify if they are collinear on different levels
-                                        if (upperStudElement.length > lowerStudElement.length && 
-                                            Math.Abs(arrGap[i-1].Ystart - upperStudElement.Ystart) >= Math.Abs(arrGap[i - 2].Ystart - lowerStudElement.Ystart) && 
-                                            Math.Abs(arrGap[i - 1].Ystart - upperStudElement.Yend) >= Math.Abs(arrGap[i - 2].Ystart - lowerStudElement.Yend))
-                                        {
-                                            // Add upper stud match label to lower stud element 
-                                            lowerStudElement.studMatch = upperStudElement.label;
-
-                                            // Add item to worksheet if matched (if report is desired)
-                                            if ((bool)arrDesignData[56] == true)
-                                            {
-                                                Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
-                                                wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
-                                                wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
-                                                wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
-                                                int trib = 0;
-                                                foreach (trussMatch truss in lowerStudElement.trussMatches)
-                                                {
-                                                    trib += truss.trussLength;
-                                                }
-                                                wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
-                                            }
-                                        }
-                                    }
-
-                                    /* Matching X-direction studs */
-                                    if (lowerStudElement.direction == 'X' && upperStudElement.direction == 'X' &&
-                                        (arrGap[i - 1].Ystart - arrGap[i - 2].Ystart) >= (upperStudElement.Ystart - (lowerStudElement.Ystart + 1)) &&
-                                        (arrGap[i - 1].Ystart - arrGap[i - 2].Ystart) <= (upperStudElement.Ystart - (lowerStudElement.Ystart - 1)))
-                                    {
-                                        // Check Lengths, Gap Start Lengths, X-Start to verify they are matching
-                                        if (upperStudElement.length <= (lowerStudElement.length + 1) && upperStudElement.length >= (lowerStudElement.length - 1) &&
-                                            upperStudElement.Xstart <= (lowerStudElement.Xstart + 1) && upperStudElement.Xstart >= (lowerStudElement.Xstart - 1))
-                                        {
-                                            // Add upper stud match label to lower stud element 
-                                            lowerStudElement.studMatch = upperStudElement.label;
-
-                                            // Add item to worksheet if matched (if report is desired)
-                                            if ((bool)arrDesignData[56] == true)
-                                            {
-                                                Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
-                                                wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
-                                                wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
-                                                wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
-                                                int trib = 0;
-                                                foreach (trussMatch truss in upperStudElement.trussMatches)
-                                                {
-                                                    trib += truss.trussLength;
-                                                }
-                                                wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
-                                            }
-                                        }
-
-                                        // If lengths are not equal, check X start/end differences to verify if they are collinear on different levels
-                                        if (upperStudElement.length > lowerStudElement.length && upperStudElement.Xstart <= lowerStudElement.Xstart &&
-                                            upperStudElement.Xend >= lowerStudElement.Xend)
-                                        {
-                                            // Add upper stud match label to lower stud element 
-                                            lowerStudElement.studMatch = upperStudElement.label;
-
-                                            // Add item to worksheet if matched (if report is desired)
-                                            if ((bool)arrDesignData[56] == true)
-                                            {
-                                                Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
-                                                wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
-                                                wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
-                                                wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
-                                                int trib = 0;
-                                                foreach (trussMatch truss in upperStudElement.trussMatches)
-                                                {
-                                                    trib += truss.trussLength;
-                                                }
-                                                wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
-                                            }
-                                        }
-                                    }
-
-                                    /* Matching Angled direction studs */
-                                    if (lowerStudElement.direction == 'A' && upperStudElement.direction == 'A')
-                                    {
-                                        // Check Slope, lengths, Gap Start and X Start to verify they are matching
-                                        if (upperStudElement.slope == lowerStudElement.slope && upperStudElement.length <= (lowerStudElement.length + 1) &&
-                                            upperStudElement.length <= (lowerStudElement.length - 1) && upperStudElement.startGapLength == lowerStudElement.startGapLength
-                                            && upperStudElement.Xstart == lowerStudElement.Xstart)
-                                        {
-                                            // Add upper stud match label to lower stud element 
-                                            lowerStudElement.studMatch = upperStudElement.label;
-
-                                            // Add item to worksheet if matched (if report is desired)
-                                            if ((bool)arrDesignData[56] == true)
-                                            {
-                                                Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
-                                                wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
-                                                wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
-                                                wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
-                                                int trib = 0;
-                                                foreach (trussMatch truss in upperStudElement.trussMatches)
-                                                {
-                                                    trib += truss.trussLength;
-                                                }
-                                                wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
-                                            }
-                                        }
-
-                                        // If lengths are not equal, check gap differences, Xstarts and slopes to verify if they are collinear on different levels
-                                        if (upperStudElement.length != lowerStudElement.length && upperStudElement.slope == lowerStudElement.slope &&
-                                            upperStudElement.Xstart <= lowerStudElement.Xstart && upperStudElement.Xend >= lowerStudElement.Xend && 
-                                            (upperStudElement.Yintercept - arrGap[i-1].Ystart) == (lowerStudElement.Yintercept - arrGap[i-2].Ystart))
-                                        {
-                                            // Add upper stud match label to lower stud element 
-                                            lowerStudElement.studMatch = upperStudElement.label;
-
-                                            // Add item to worksheet if matched (if report is desired)
-                                            if ((bool)arrDesignData[56] == true)
-                                            {
-                                                Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
-                                                wsVmatch.get_Range("E7").Offset[0, upperStud].Value = "Match";
-                                                wsVmatch.get_Range("B" + (9 + lowerStud)).Value = lowerStudElement.studMatch;
-                                                wsVmatch.get_Range("C" + (9 + lowerStud)).Value = "Match";
-                                                int trib = 0;
-                                                foreach (trussMatch truss in upperStudElement.trussMatches)
-                                                {
-                                                    trib += truss.trussLength;
-                                                }
-                                                wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
-                                            }
-                                        }
-                                    }
-
-                                    // Increment lower stud element counter
-                                    lowerStud++;
+                                    wsCalcTable.get_Range("F" + (6 + j)).Value = arrDesignData[37];
+                                }
+                                if (studElement.studClass == 'I' && studElement.level == iLevel)
+                                {
+                                    wsCalcTable.get_Range("F" + (6 + j)).Value = arrDesignData[39];
+                                }
+                                else
+                                {
+                                    wsCalcTable.get_Range("F" + (6 + j)).Value = arrDesignData[41];
+                                }
+                            }
+                            // Stud Grade
+                            {
+                                if (studElement.studClass == 'I' && studElement.level < iLevel)
+                                {
+                                    wsCalcTable.get_Range("G" + (6 + j)).Value = arrDesignData[38];
+                                }
+                                if (studElement.studClass == 'I' && studElement.level == iLevel)
+                                {
+                                    wsCalcTable.get_Range("G" + (6 + j)).Value = arrDesignData[40];
+                                }
+                                else
+                                {
+                                    wsCalcTable.get_Range("G" + (6 + j)).Value = arrDesignData[42];
+                                }
+                            }
+                            wsCalcTable.get_Range("H" + (6 + j)).Value = 0;
+                            wsCalcTable.get_Range("I" + (6 + j)).Value = 0;
+                            // Trib Lengths
+                            wsCalcTable.get_Range("J" + (6 + j), "N" + (6 + j)).Value = 0;
+                            foreach(trussMatch trussElement in studElement.trussMatches)
+                            {
+                                if (trussElement.trussType == 'R')
+                                {
+                                    wsCalcTable.get_Range("J" + (6 + j)).Value = ((int)wsCalcTable.get_Range("J" + (6 + j)).Value + trussElement.trussLength);
+                                }
+                                if (trussElement.trussType == 'U')
+                                {
+                                    wsCalcTable.get_Range("K" + (6 + j)).Value = ((int)wsCalcTable.get_Range("K" + (6 + j)).Value + trussElement.trussLength);
+                                }
+                                if (trussElement.trussType == 'B')
+                                {
+                                    wsCalcTable.get_Range("L" + (6 + j)).Value = ((int)wsCalcTable.get_Range("L" + (6 + j)).Value + trussElement.trussLength);
+                                }
+                                if (trussElement.trussType == 'C')
+                                {
+                                    wsCalcTable.get_Range("M" + (6 + j)).Value = ((int)wsCalcTable.get_Range("M" + (6 + j)).Value + trussElement.trussLength);
+                                }
+                                if (trussElement.trussType == 'O')
+                                {
+                                    wsCalcTable.get_Range("N" + (6 + j)).Value = ((int)wsCalcTable.get_Range("N" + (6 + j)).Value + trussElement.trussLength);
                                 }
                             }
 
-                            // Increment upper stud counter (for worksheet reporting)
-                            upperStud++;
+                            MediationProgress.progressBar.Increment(1);
+                            j++;
                         }
-
-                        // Increment progress bar
-                        MediationProgress.progressBar.Increment(1);
                     }
 
-                    // AutoFit the matching worksheet and add lower level stud labels (if report is requested)
-                    if ((bool)arrDesignData[56] == true)
-                    {
-                        Excel.Worksheet wsVmatch = Application.Worksheets.get_Item("STUD " + i + "," + (i - 1));
-                        lowerStud = 0;
-                        foreach (RawLineData lowerStudElement in arrStud)
-                        {
-                            // Add stud labels for lower level in column
-                            if (lowerStudElement.level == (i - 1))
-                            {
-                                wsVmatch.get_Range("D" + (9 + lowerStud)).Value = lowerStudElement.label;
-                                lowerStud++;
-                            }
-                        }
-                        wsVmatch.get_Range("A1", "NN1").EntireColumn.AutoFit();
-                    }
+                    MediationProgress.progressBar.Increment(1);
                 }
             }
             catch (Exception e) { MessageBox.Show(e.Message); }

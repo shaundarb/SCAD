@@ -1095,7 +1095,7 @@
             this.comboBoxPdfReports.Name = "comboBoxPdfReports";
             this.comboBoxPdfReports.Size = new System.Drawing.Size(62, 21);
             this.comboBoxPdfReports.TabIndex = 30;
-            this.comboBoxPdfReports.Text = "Yes";
+            this.comboBoxPdfReports.Text = "No";
             // 
             // textBoxOtherLL
             // 
