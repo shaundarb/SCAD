@@ -130,7 +130,7 @@ namespace SCAD
         {
             public string trussLabel { get; set; }
             public char trussType { get; set; }
-            public int trussLength { get; set; }
+            public float trussLength { get; set; }
             public char trussAngled { get; set; }               // 'A' if both stud and truss are angled
         }
 
@@ -806,7 +806,7 @@ namespace SCAD
                 wsCalcTable.get_Range("D2").Value = "Stud Grade:";
                 wsCalcTable.get_Range("D3").Value = "Level:";
                 wsCalcTable.get_Range("D5").Value = "# Levels";
-                wsCalcTable.get_Range("E2").Value = "VARIES:";
+                wsCalcTable.get_Range("E2").Value = "VARIES";
                 wsCalcTable.get_Range("E3").Value = i;
                 wsCalcTable.get_Range("E5").Value = "Wall Thickness (in)";
                 wsCalcTable.get_Range("F5").Value = "Stud Species";
@@ -846,6 +846,7 @@ namespace SCAD
                 wsCalcTable.get_Range("AK5").Value = "Check";
                 wsCalcTable.get_Range("AQ5").Value = "Next Match Above";
                 wsCalcTable.get_Range("AR5").Value = "Next Match Below";
+                wsCalcTable.get_Range("AS4").Value = "Reactions From Current Level (plf)";
                 wsCalcTable.get_Range("AS5").Value = "Roof DL Rxn";
                 wsCalcTable.get_Range("AT5").Value = "Roof LL Rxn";
                 wsCalcTable.get_Range("AU5").Value = "Unit DL Rxn";
@@ -870,7 +871,7 @@ namespace SCAD
                 for (int m = 0; m < levelCount; m++)
                 {
                     wsCalcTable.get_Range("AB" + (6 + m)).Validation.Add(Excel.XlDVType.xlValidateList, Type.Missing,
-                        Excel.XlFormatConditionOperator.xlBetween, Formula1: "=YN");
+                        Excel.XlFormatConditionOperator.xlBetween, Formula1: "='Stud Schedule'!AF2:AQ2");
                     wsCalcTable.get_Range("AB" + (6 + m)).Validation.ShowInput = true;
                     wsCalcTable.get_Range("AB" + (6 + m)).Validation.InCellDropdown = true;
                     wsCalcTable.get_Range("AB" + (6 + m)).Validation.IgnoreBlank = false;
@@ -948,6 +949,7 @@ namespace SCAD
                 wsCalcTable.get_Range("AF1", "AH1").ColumnWidth = 11.13;
                 wsCalcTable.get_Range("AI1", "AJ1").ColumnWidth = 9.5;
                 wsCalcTable.get_Range("AS1", "BB1").ColumnWidth = 8.38;
+                wsCalcTable.get_Range("AQ1", "AR1").ColumnWidth = 16.63;
 
                 // Add Conditional Formatting
                 Excel.FormatCondition unityCheckNG = (Excel.FormatCondition)wsCalcTable.get_Range("AK6", "AP" + (5 + levelCount)).FormatConditions.Add(
@@ -1093,10 +1095,10 @@ namespace SCAD
                     goto case 2;
                 case 2:
                     wsCalcTableN = this.Application.Worksheets.get_Item("L2 Calc Table");
-                    wsCalcTableN.get_Range("AL5").Value = "L2 Check";
+                    wsCalcTableN.get_Range("AL5").Value = "L1 Check";
 
                     wsCalcTableN = this.Application.Worksheets.get_Item("L1 Calc Table");
-                    wsCalcTableN.get_Range("AL5").Value = "L1 Check";
+                    wsCalcTableN.get_Range("AL5").Value = "L2 Check";
                     break;
             }
 
@@ -1112,8 +1114,8 @@ namespace SCAD
             wsInput.get_Range("D12").Value = arrDesignData[37];         // Stud Species 1
             wsInput.get_Range("D13").Value = arrDesignData[38];         // Stud Grade 1
             wsInput.get_Range("F12").Value = arrDesignData[39];         // Stud Species 2
-            wsInput.get_Range("H12").Value = arrDesignData[40];         // Stud Grade 2
-            wsInput.get_Range("F13").Value = arrDesignData[41];         // Stud Species 3
+            wsInput.get_Range("F13").Value = arrDesignData[40];         // Stud Grade 2
+            wsInput.get_Range("H12").Value = arrDesignData[41];         // Stud Species 3
             wsInput.get_Range("H13").Value = arrDesignData[42];         // Stud Grade 3
             wsInput.get_Range("D16").Value = arrDesignData[43];          // Lx1
             wsInput.get_Range("E16").Value = arrDesignData[44];          // Lx2
@@ -1498,7 +1500,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'U':
@@ -1506,7 +1508,7 @@ namespace SCAD
                                             {
                                                 trussLabel = trussElement.label,
                                                 trussType = 'U',
-                                                trussLength = (int)(trussElement.length / 2)
+                                                trussLength = (trussElement.length / 24)
                                             });
                                         break;
                                     case 'B':
@@ -1514,7 +1516,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'C':
@@ -1522,7 +1524,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'O':
@@ -1530,7 +1532,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     default:
@@ -1538,7 +1540,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                 }
@@ -1563,7 +1565,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'U':
@@ -1571,7 +1573,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'B':
@@ -1579,7 +1581,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'C':
@@ -1587,7 +1589,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'O':
@@ -1595,7 +1597,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     default:
@@ -1603,7 +1605,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                 }
@@ -1621,7 +1623,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'U':
@@ -1629,7 +1631,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'B':
@@ -1637,7 +1639,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'C':
@@ -1645,7 +1647,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'O':
@@ -1653,7 +1655,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     default:
@@ -1661,7 +1663,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                 }
@@ -1685,7 +1687,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'U':
@@ -1693,7 +1695,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'B':
@@ -1701,7 +1703,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'C':
@@ -1709,7 +1711,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'O':
@@ -1717,7 +1719,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     default:
@@ -1725,7 +1727,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                 }
@@ -1762,7 +1764,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1771,7 +1773,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1780,7 +1782,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1789,7 +1791,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1798,7 +1800,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1807,7 +1809,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1827,7 +1829,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1836,7 +1838,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1845,7 +1847,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1854,7 +1856,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1863,7 +1865,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1872,7 +1874,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1892,7 +1894,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1901,7 +1903,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1910,7 +1912,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1919,7 +1921,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1928,7 +1930,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1937,7 +1939,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1957,7 +1959,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1966,7 +1968,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1975,7 +1977,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1984,7 +1986,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -1993,7 +1995,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -2002,7 +2004,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2),
+                                            trussLength = (trussElement.length / 24),
                                             trussAngled = 'A'
                                         });
                                         break;
@@ -2026,7 +2028,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'U':
@@ -2034,7 +2036,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'B':
@@ -2042,7 +2044,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'C':
@@ -2050,7 +2052,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'O':
@@ -2058,7 +2060,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     default:
@@ -2066,7 +2068,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                 }
@@ -2091,7 +2093,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'U':
@@ -2099,7 +2101,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'B':
@@ -2107,7 +2109,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'C':
@@ -2115,7 +2117,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'O':
@@ -2123,7 +2125,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     default:
@@ -2131,7 +2133,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                 }
@@ -2149,7 +2151,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'U':
@@ -2157,7 +2159,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'B':
@@ -2165,7 +2167,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'C':
@@ -2173,7 +2175,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'O':
@@ -2181,7 +2183,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     default:
@@ -2189,7 +2191,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                 }
@@ -2215,7 +2217,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'R',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'U':
@@ -2223,7 +2225,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'U',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'B':
@@ -2231,7 +2233,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'B',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'C':
@@ -2239,7 +2241,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'C',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     case 'O':
@@ -2247,7 +2249,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'O',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                     default:
@@ -2255,7 +2257,7 @@ namespace SCAD
                                         {
                                             trussLabel = trussElement.label,
                                             trussType = 'X',
-                                            trussLength = (int)(trussElement.length / 2)
+                                            trussLength = (trussElement.length / 24)
                                         });
                                         break;
                                 }
@@ -2495,7 +2497,7 @@ namespace SCAD
                                             int trib = 0;
                                             foreach (trussMatch truss in upperStudElement.trussMatches)
                                             {
-                                                trib += truss.trussLength;
+                                                trib += (int)truss.trussLength;
                                             }
                                             wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
                                         }
@@ -2519,7 +2521,7 @@ namespace SCAD
                                             int trib = 0;
                                             foreach (trussMatch truss in lowerStudElement.trussMatches)
                                             {
-                                                trib += truss.trussLength;
+                                                trib += (int)truss.trussLength;
                                             }
                                             wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
                                         }
@@ -2548,7 +2550,7 @@ namespace SCAD
                                             int trib = 0;
                                             foreach (trussMatch truss in upperStudElement.trussMatches)
                                             {
-                                                trib += truss.trussLength;
+                                                trib += (int)truss.trussLength;
                                             }
                                             wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
                                         }
@@ -2571,7 +2573,7 @@ namespace SCAD
                                             int trib = 0;
                                             foreach (trussMatch truss in upperStudElement.trussMatches)
                                             {
-                                                trib += truss.trussLength;
+                                                trib += (int)truss.trussLength;
                                             }
                                             wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
                                         }
@@ -2600,7 +2602,7 @@ namespace SCAD
                                             int trib = 0;
                                             foreach (trussMatch truss in upperStudElement.trussMatches)
                                             {
-                                                trib += truss.trussLength;
+                                                trib += (int)truss.trussLength;
                                             }
                                             wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
                                         }
@@ -2624,7 +2626,7 @@ namespace SCAD
                                             int trib = 0;
                                             foreach (trussMatch truss in upperStudElement.trussMatches)
                                             {
-                                                trib += truss.trussLength;
+                                                trib += (int)truss.trussLength;
                                             }
                                             wsVmatch.get_Range("E8").Offset[lowerStud + 1, upperStud].Value = trib;
                                         }
@@ -2677,6 +2679,10 @@ namespace SCAD
                 // Declarations
                 int j;          // Used to iterate through calc table rows
                 int levelCount; // Stores the number of studs on a current level
+                StringBuilder formula = new StringBuilder();    // Used to modify formulas (necessary to modify string in loop)
+
+                // Set Calculation to Manual while populating
+                Application.Calculation = Excel.XlCalculation.xlCalculationManual;
 
                 // Cycle through levels to handle population of each level's calc table
                 for (int i = 1; i <= iLevel; i++)
@@ -2694,66 +2700,193 @@ namespace SCAD
                     {
                         if (studElement.level == i)
                         {
-                            wsCalcTable.get_Range("B" + (6 + j)).Value = studElement.label;
-                            wsCalcTable.get_Range("C" + (6 + j)).Value = studElement.studClass.ToString();
-                            wsCalcTable.get_Range("E" + (6 + j)).Value = studElement.studThickness;
+                            wsCalcTable.get_Range("B" + (6 + j)).Value = studElement.label;                     // Stud Label
+                            wsCalcTable.get_Range("C" + (6 + j)).Value = studElement.studClass.ToString();      // Stud Exterior/Interior
+                            wsCalcTable.get_Range("E" + (6 + j)).Value = studElement.studThickness;             // Stud Thickness
+
                             // Stud Species
-                            {
-                                if (studElement.studClass == 'I' && studElement.level < iLevel)
-                                {
-                                    wsCalcTable.get_Range("F" + (6 + j)).Value = arrDesignData[37];
-                                }
-                                if (studElement.studClass == 'I' && studElement.level == iLevel)
-                                {
-                                    wsCalcTable.get_Range("F" + (6 + j)).Value = arrDesignData[39];
-                                }
-                                else
-                                {
-                                    wsCalcTable.get_Range("F" + (6 + j)).Value = arrDesignData[41];
-                                }
-                            }
+                            wsCalcTable.get_Range("F" + (6 + j)).Value = "=IF(K" + (j + 6) + "+L" + (j + 6) + "+M" + (j + 6) + "+N" + (j + 6) + "+R" + (j + 6) + "+S" + (j + 6)
+                                + "+T" + (j + 6) + "+U" + (j + 6) + "+V" + (j + 6) + "+W" + (j + 6) + "+Y" + (j + 6) + ">0,INPUT!$D$12,IF(J" + (j + 6) + "+P" + (j + 6) + "+Q"
+                                 + (j + 6) + ">0,INPUT!$F$12,IF(C" + (j + 6) + "=\"E\",INPUT!$H$12,INPUT!$F$12)))";
+
                             // Stud Grade
-                            {
-                                if (studElement.studClass == 'I' && studElement.level < iLevel)
-                                {
-                                    wsCalcTable.get_Range("G" + (6 + j)).Value = arrDesignData[38];
-                                }
-                                if (studElement.studClass == 'I' && studElement.level == iLevel)
-                                {
-                                    wsCalcTable.get_Range("G" + (6 + j)).Value = arrDesignData[40];
-                                }
-                                else
-                                {
-                                    wsCalcTable.get_Range("G" + (6 + j)).Value = arrDesignData[42];
-                                }
-                            }
-                            wsCalcTable.get_Range("H" + (6 + j)).Value = 0;
-                            wsCalcTable.get_Range("I" + (6 + j)).Value = 0;
-                            // Trib Lengths
+                            wsCalcTable.get_Range("G" + (6 + j)).Value = "=IF(K" + (j + 6) + "+L" + (j + 6) + "+M" + (j + 6) + "+N" + (j + 6) + "+R" + (j + 6) + "+S" + (j + 6)
+                                + "+T" + (j + 6) + "+U" + (j + 6) + "+V" + (j + 6) + "+W" + (j + 6) + "+Y" + (j + 6) + ">0,INPUT!$D$13,IF(J" + (j + 6) + "+P" + (j + 6) + "+Q"
+                                + (j + 6) + ">0,INPUT!$F$13,IF(C" + (j + 6) + "=\"E\",INPUT!$H$13,INPUT!$F$13)))";
+
+                            wsCalcTable.get_Range("H" + (6 + j)).Value = 0;                                     // Stud Add'l DL
+                            wsCalcTable.get_Range("I" + (6 + j)).Value = 0;                                     // Stud Add'l LL
+
+                            // Truss Trib Lengths
                             wsCalcTable.get_Range("J" + (6 + j), "N" + (6 + j)).Value = 0;
                             foreach(trussMatch trussElement in studElement.trussMatches)
                             {
                                 if (trussElement.trussType == 'R')
                                 {
-                                    wsCalcTable.get_Range("J" + (6 + j)).Value = ((int)wsCalcTable.get_Range("J" + (6 + j)).Value + trussElement.trussLength);
+                                    wsCalcTable.get_Range("J" + (6 + j)).Value = (wsCalcTable.get_Range("J" + (6 + j)).Value + trussElement.trussLength);
                                 }
                                 if (trussElement.trussType == 'U')
                                 {
-                                    wsCalcTable.get_Range("K" + (6 + j)).Value = ((int)wsCalcTable.get_Range("K" + (6 + j)).Value + trussElement.trussLength);
+                                    wsCalcTable.get_Range("K" + (6 + j)).Value = (wsCalcTable.get_Range("K" + (6 + j)).Value + trussElement.trussLength);
                                 }
                                 if (trussElement.trussType == 'B')
                                 {
-                                    wsCalcTable.get_Range("L" + (6 + j)).Value = ((int)wsCalcTable.get_Range("L" + (6 + j)).Value + trussElement.trussLength);
+                                    wsCalcTable.get_Range("L" + (6 + j)).Value = (wsCalcTable.get_Range("L" + (6 + j)).Value + trussElement.trussLength);
                                 }
                                 if (trussElement.trussType == 'C')
                                 {
-                                    wsCalcTable.get_Range("M" + (6 + j)).Value = ((int)wsCalcTable.get_Range("M" + (6 + j)).Value + trussElement.trussLength);
+                                    wsCalcTable.get_Range("M" + (6 + j)).Value = (wsCalcTable.get_Range("M" + (6 + j)).Value + trussElement.trussLength);
                                 }
                                 if (trussElement.trussType == 'O')
                                 {
-                                    wsCalcTable.get_Range("N" + (6 + j)).Value = ((int)wsCalcTable.get_Range("N" + (6 + j)).Value + trussElement.trussLength);
+                                    wsCalcTable.get_Range("N" + (6 + j)).Value = (wsCalcTable.get_Range("N" + (6 + j)).Value + trussElement.trussLength);
                                 }
                             }
+                            wsCalcTable.get_Range("O" + (6 + j)).Value = "='L" + i + " Calc Table'!H2";         // Stud Wall Height (per level)
+
+                            // Reactions Above Formulas
+                            if (i == iLevel)
+                            {
+                                wsCalcTable.get_Range("P" + (6 + j)).Value = "=H" + (j + 6);                    // Roof DL Rxn Above
+                                wsCalcTable.get_Range("Q" + (6 + j)).Value = "=I" + (j + 6);                    // Roof LL Rxn Above
+                                wsCalcTable.get_Range("R" + (6 + j), "Y" + (6 + j)).Value = 0;                  // All other Rxns Above
+                            }
+                            else
+                            {
+                                wsCalcTable.get_Range("P" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",44,FALSE),0),0)";
+                                wsCalcTable.get_Range("Q" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",45,FALSE),0),0)";
+                                wsCalcTable.get_Range("R" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",46,FALSE),0),0)";
+                                wsCalcTable.get_Range("S" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",47,FALSE),0),0)";
+                                wsCalcTable.get_Range("T" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",48,FALSE),0),0)";
+                                wsCalcTable.get_Range("U" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",49,FALSE),0),0)";
+                                wsCalcTable.get_Range("V" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",50,FALSE),0),0)";
+                                wsCalcTable.get_Range("W" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",51,FALSE),0),0)";
+                                wsCalcTable.get_Range("X" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",52,FALSE),0),0)+ H" + (j + 6);
+                                wsCalcTable.get_Range("Y" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:Y"
+                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",53,FALSE),0),0)+ I" + (j + 6);
+                            }
+                            wsCalcTable.get_Range("Z" + (6 + j)).Value = "=INPUT!$D$16";                        // Unbraced Lx
+                            wsCalcTable.get_Range("AA" + (6 + j)).Value = "=INPUT!$D$17";                       // Unbraced Ly
+
+                            // Stud Callout Size Formula
+                            wsCalcTable.get_Range("AD" + (6 + j)).Value = "=IFERROR(IF(AB" + (j + 6) + "<>\"\",HLOOKUP(AB" + (j + 6) + ",'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + "=1,2,IF(D" + (j + 6) + 
+                                "=2,4,IF(D" + (j + 6) + "=3,6,IF(D" + (j + 6) + "=4,8,IF(D" + (j + 6) + "=5,10,12))))),FALSE),HLOOKUP(LEFT(AC" + (j + 6) + ",3),'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + 
+                                "=1,2,IF(D" + (j + 6) + "=2,4,IF(D" + (j + 6) + "=3,6,IF(D" + (j + 6) + "=4,8,IF(D" + (j + 6) + "=5,10,12))))),FALSE)),\"\")";
+
+                            // Stud Callout Spacing Formula
+                            wsCalcTable.get_Range("AE" + (6 + j)).Value = "=IFERROR(IF(AB" + (j + 6) + "<>\"\",HLOOKUP(AB" + (j + 6) + ",'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + "=1,3,IF(D" + (j + 6) +
+                                "=2,5,IF(D" + (j + 6) + "=3,7,IF(D" + (j + 6) + "=4,9,IF(D" + (j + 6) + "=5,11,13))))),FALSE),HLOOKUP(LEFT(AC" + (j + 6) + ",3),'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) +
+                                "=1,3,IF(D" + (j + 6) + "=2,5,IF(D" + (j + 6) + "=3,7,IF(D" + (j + 6) + "=4,9,IF(D" + (j + 6) + "=5,11,13))))),FALSE)),24)";
+
+                            // OK and NG flags for Current Level
+                            wsCalcTable.get_Range("AK" + (6 + j)).Value = "=IF(OR(AF" + (j + 6) + ">1,IF(INPUT!$I$20=\"Yes\",IF(O" + (j + 6) + "*12*INPUT!$I$24/(E" + (j + 6) + "-0.5)>33,AG" + (j + 6) + 
+                                ">1),AG" + (j + 6) + ">1),AH" + (j + 6) + ">INPUT!$I$7,AI" + (j + 6) + "<AJ" + (j + 6) + "),\"N.G.\",IF(AND(AF" + (j + 6) + "<=1,AG" + (j + 6) + "<=1,AH" + (j + 6) + 
+                                "<=1,AI" + (j + 6) + ">=AJ" + (j + 6) + "),\"O.K.\",\"Confirm\"))";
+
+                            // OK and NG flags for Levels Below (Dynamic formula builder)
+                            for (int k = (i - 1); k > 0; k--)
+                            {
+                                if (k == (i - 1))
+                                {
+                                    formula.Append("=IFERROR(INDEX('L").Append((i - 1)).Append(" Calc Table'!AK6:AK").Append((arrStud.Count(n => n.level == (i - 1)) + 6)).Append(",MATCH(AR").Append((j + 6))
+                                    .Append(",'L").Append((i - 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
+                                    wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, k].Value = formula.ToString();
+                                    formula.Clear();
+                                }
+                                else
+                                {
+                                    formula.Append("=IFERROR(INDEX('L").Append((i - 1)).Append(" Calc Table'!AR6:AR").Append((arrStud.Count(n => n.level == (i - 1)) + 6)).Append(",MATCH(AR").Append((j + 6))
+                                    .Append(",'L").Append((i - 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
+                                    for (int m = (i - 2); m >= k; m--)
+                                    {
+                                        if (m == k)
+                                        {
+                                            formula.Insert(9, "INDEX('L" + m + " Calc Table'!AK6:AK" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
+                                            formula.Remove(formula.Length - 9, 9);
+                                            formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
+                                        }
+                                        else
+                                        {
+                                            formula.Insert(9, "INDEX('L" + m + " Calc Table'!AR6:AR" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
+                                            formula.Remove(formula.Length - 9, 9);
+                                            formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
+                                        }
+                                    }
+                                    wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, k].Value = formula.ToString();
+                                    formula.Clear();
+                                }
+                            }
+
+                            // OK and NG flags for Levels Above (Dynamic formula builder)
+                            for (int k = (i + 1); k <= iLevel; k++)
+                            {
+                                if (k == (i + 1))
+                                {
+                                    formula.Append("=IFERROR(INDEX('L").Append(k).Append(" Calc Table'!AK6:AK").Append((arrStud.Count(n => n.level == k) + 6)).Append(",MATCH(AQ").Append((j + 6))
+                                        .Append(",'L").Append(k).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == k) + 6)).Append(",0),1),\"N/A\")");
+                                    wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, (k - 1)].Value = formula.ToString();
+                                    formula.Clear();
+                                }
+                                else
+                                {
+                                    formula.Append("=IFERROR(INDEX('L").Append((i + 1)).Append(" Calc Table'!AQ6:AQ").Append((arrStud.Count(n => n.level == (i + 1)) + 6)).Append(",MATCH(AQ").Append((j + 6))
+                                    .Append(",'L").Append((i + 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
+                                    for (int m = (i + 2); m <= k; m++)
+                                    {
+                                        if (m == k)
+                                        {
+                                            formula.Insert(9, "INDEX('L" + m + " Calc Table'!AK6:AK" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
+                                            formula.Remove(formula.Length - 9, 9);
+                                            formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
+                                        }
+                                        else
+                                        {
+                                            formula.Insert(9, "INDEX('L" + m + " Calc Table'!AQ6:AQ" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
+                                            formula.Remove(formula.Length - 9, 9);
+                                            formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
+                                        }
+                                    }
+                                    wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, (k - 1)].Value = formula.ToString();
+                                    formula.Clear();
+                                }
+                            }
+                            
+                            // Stud Match Above Label
+                            if (i != iLevel)
+                            {
+                                wsCalcTable.get_Range("AQ" + (6 + j)).Value = studElement.studMatch;
+                            }
+
+                            // Stud Match Below Label Formula
+                            if (i != 1)
+                            {
+                                wsCalcTable.get_Range("AR" + (6 + j)).Value = "=IFERROR(INDEX('L" + (i-1) + " Calc Table'!B6:B" + (arrStud.Count(n => n.level == (i-1)) + 6)
+                                    + ",MATCH(B" + (j + 6) + ",'L" + (i - 1) + " Calc Table'!AQ6:AQ" + (arrStud.Count(n => n.level == (i - 1)) + 6) + ",0)),\"\")";
+                            }
+
+                            wsCalcTable.get_Range("AS" + (6 + j)).Value = "=IFERROR(J" + (j + 6) + "*INPUT!D25, 0)";                                // Roof DL Rxn Current
+                            wsCalcTable.get_Range("AT" + (6 + j)).Value = "=IFERROR(J" + (j + 6) + "*MAX(INPUT!D23,INPUT!D24,INPUT!D26), 0)";       // Roof LL Rxn Current
+                            wsCalcTable.get_Range("AU" + (6 + j)).Value = "=IFERROR(K" + (j + 6) + "*INPUT!D27, 0)";                                // Unit DL Rxn Current
+                            wsCalcTable.get_Range("AV" + (6 + j)).Value = "=IFERROR(K" + (j + 6) + "*INPUT!D28, 0)";                                // Unit LL Rxn Current
+                            wsCalcTable.get_Range("AW" + (6 + j)).Value = "=IFERROR(L" + (j + 6) + "*INPUT!D29, 0)";                                // Balc DL Rxn Current
+                            wsCalcTable.get_Range("AX" + (6 + j)).Value = "=IFERROR(L" + (j + 6) + "*INPUT!D30, 0)";                                // Balc LL Rxn Current
+                            wsCalcTable.get_Range("AY" + (6 + j)).Value = "=IFERROR(M" + (j + 6) + "*INPUT!D31, 0)";                                // Corr DL Rxn Current
+                            wsCalcTable.get_Range("AZ" + (6 + j)).Value = "=IFERROR(M" + (j + 6) + "*INPUT!D32, 0)";                                // Corr LL Rxn Current
+                            wsCalcTable.get_Range("BB" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D33+IF(C" + (j + 6) + "=\"I\",INPUT!D35*O" + (j + 6) + ",INPUT!D36*O" + (j + 6) + "), 0)";                                // Other DL Rxn Current
+                            wsCalcTable.get_Range("BA" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D34, 0)";                                // Other LL Rxn Current
+                            wsCalcTable.get_Range("BC" + (6 + j)).Value = studElement.Xstart;                                                       // X Start Coord
+                            wsCalcTable.get_Range("BD" + (6 + j)).Value = studElement.Ystart;                                                       // Y Start Coord
+                            wsCalcTable.get_Range("BE" + (6 + j)).Value = studElement.Xend;                                                         // X End Coord
+                            wsCalcTable.get_Range("BF" + (6 + j)).Value = studElement.Yend;                                                         // Y End Coord
 
                             MediationProgress.progressBar.Increment(1);
                             j++;
@@ -2762,6 +2895,9 @@ namespace SCAD
 
                     MediationProgress.progressBar.Increment(1);
                 }
+
+                // Set Calculation to Automatic after populating
+                Application.Calculation = Excel.XlCalculation.xlCalculationAutomatic;
             }
             catch (Exception e) { MessageBox.Show(e.Message); }
             return;
