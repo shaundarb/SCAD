@@ -758,8 +758,11 @@ namespace SCAD
             // Send arrStud, arrTruss, arrGap to Vertical Matching Routine
             VSM(ref arrStud, ref arrTruss, arrGap, arrDesignData, iLevel, ref MediationProgress);
                         
-            // Finalize design of stud workbook
-            AutoDesign(ref arrStud, ref arrTruss, arrDesignData, iLevel, ref MediationProgress);
+            // Finalize population of stud workbook
+            StudCalcPopulate(ref arrStud, ref arrTruss, arrDesignData, iLevel, ref MediationProgress);
+
+            // Continue onto Scheduling and Individual Design
+            AutoDesign(ref arrStud, arrDesignData, iLevel, ref MediationProgress);
 
             // Unload Progress Bar
             MediationProgress.Close();
@@ -1155,7 +1158,7 @@ namespace SCAD
             wsInput.get_Range("I30").Value = arrDesignData[16];          // Buckling Factor
             wsInput.get_Range("I31").Value = arrDesignData[17];          // Bearing Area Factor
             wsInput.get_Range("I33").Value = arrDesignData[18];          // Seismic SDS
-            if (arrDesignData[60].ToString() == "True")                             // Compression Limit
+            if (arrDesignData[60].ToString() == "True")                  // Compression Limit
             {
                 wsInput.get_Range("I20").Value = "Yes";
             }
@@ -2666,238 +2669,378 @@ namespace SCAD
         return;
         }
 
-        // AutoDesign() -- Designs and completes the stud calculation tables to complete mediation routine
-        public void AutoDesign(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
+        // StudCalcPopulate() -- Populates the stud calculation tables to complete mediation routine
+        public void StudCalcPopulate(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
         {
-            /* AutoDesign() -- Called from DataSort() after vertical and horizontal
+            /* StudCalcPopulate() -- Called from DataSort() after vertical and horizontal
              * matching routines are completed. This function handles population of 
              * the stud calc table data in the Stud Design Workbook. After this
              * step is complete, the scheduling parameters are then determined.*/
-            
-            try
+
+            // Declarations
+            int j;          // Used to iterate through calc table rows
+            int levelCount; // Stores the number of studs on a current level
+            StringBuilder formula = new StringBuilder();    // Used to modify formulas (necessary to modify string in loop)
+
+            // Set Calculation to Manual while populating
+            Application.Calculation = Excel.XlCalculation.xlCalculationManual;
+
+            // Cycle through levels to handle population of each level's calc table
+            for (int i = 1; i <= iLevel; i++)
             {
-                // Declarations
-                int j;          // Used to iterate through calc table rows
-                int levelCount; // Stores the number of studs on a current level
-                StringBuilder formula = new StringBuilder();    // Used to modify formulas (necessary to modify string in loop)
+                levelCount = arrStud.Count(n => n.level == i);
 
-                // Set Calculation to Manual while populating
-                Application.Calculation = Excel.XlCalculation.xlCalculationManual;
+                /**** Input level specific design data to worksheet ****/
+                Excel.Worksheet wsCalcTable = Application.Worksheets.get_Item("L" + i + " Calc Table");
+                wsCalcTable.get_Range("H2").Value = arrDesignData[3 + i];
+                wsCalcTable.get_Range("A4").Value = "Print All?";
 
-                // Cycle through levels to handle population of each level's calc table
-                for (int i = 1; i <= iLevel; i++)
+                /**** Begin populating individual stud data to worksheet ****/
+                j = 0;
+                foreach (RawLineData studElement in arrStud)
                 {
-                    levelCount = arrStud.Count(n => n.level == i);
-
-                    /**** Input level specific design data to worksheet ****/
-                    Excel.Worksheet wsCalcTable = Application.Worksheets.get_Item("L" + i + " Calc Table");
-                    wsCalcTable.get_Range("H2").Value = arrDesignData[3 + i];
-                    wsCalcTable.get_Range("A4").Value = "Print All?";
-
-                    /**** Begin populating individual stud data to worksheet ****/
-                    j = 0;
-                    foreach (RawLineData studElement in arrStud)
+                    if (studElement.level == i)
                     {
-                        if (studElement.level == i)
+                        wsCalcTable.get_Range("B" + (6 + j)).Value = studElement.label;                     // Stud Label
+                        wsCalcTable.get_Range("C" + (6 + j)).Value = studElement.studClass.ToString();      // Stud Exterior/Interior
+                        wsCalcTable.get_Range("E" + (6 + j)).Value = studElement.studThickness;             // Stud Thickness
+
+                        // Stud Species
+                        wsCalcTable.get_Range("F" + (6 + j)).Value = "=IF(K" + (j + 6) + "+L" + (j + 6) + "+M" + (j + 6) + "+N" + (j + 6) + "+R" + (j + 6) + "+S" + (j + 6)
+                            + "+T" + (j + 6) + "+U" + (j + 6) + "+V" + (j + 6) + "+W" + (j + 6) + "+Y" + (j + 6) + ">0,INPUT!$D$12,IF(J" + (j + 6) + "+P" + (j + 6) + "+Q"
+                                + (j + 6) + ">0,INPUT!$F$12,IF(C" + (j + 6) + "=\"E\",INPUT!$H$12,INPUT!$F$12)))";
+
+                        // Stud Grade
+                        wsCalcTable.get_Range("G" + (6 + j)).Value = "=IF(K" + (j + 6) + "+L" + (j + 6) + "+M" + (j + 6) + "+N" + (j + 6) + "+R" + (j + 6) + "+S" + (j + 6)
+                            + "+T" + (j + 6) + "+U" + (j + 6) + "+V" + (j + 6) + "+W" + (j + 6) + "+Y" + (j + 6) + ">0,INPUT!$D$13,IF(J" + (j + 6) + "+P" + (j + 6) + "+Q"
+                            + (j + 6) + ">0,INPUT!$F$13,IF(C" + (j + 6) + "=\"E\",INPUT!$H$13,INPUT!$F$13)))";
+
+                        wsCalcTable.get_Range("H" + (6 + j)).Value = 0;                                     // Stud Add'l DL
+                        wsCalcTable.get_Range("I" + (6 + j)).Value = 0;                                     // Stud Add'l LL
+
+                        // Truss Trib Lengths
+                        wsCalcTable.get_Range("J" + (6 + j), "N" + (6 + j)).Value = 0;
+                        foreach(trussMatch trussElement in studElement.trussMatches)
                         {
-                            wsCalcTable.get_Range("B" + (6 + j)).Value = studElement.label;                     // Stud Label
-                            wsCalcTable.get_Range("C" + (6 + j)).Value = studElement.studClass.ToString();      // Stud Exterior/Interior
-                            wsCalcTable.get_Range("E" + (6 + j)).Value = studElement.studThickness;             // Stud Thickness
-
-                            // Stud Species
-                            wsCalcTable.get_Range("F" + (6 + j)).Value = "=IF(K" + (j + 6) + "+L" + (j + 6) + "+M" + (j + 6) + "+N" + (j + 6) + "+R" + (j + 6) + "+S" + (j + 6)
-                                + "+T" + (j + 6) + "+U" + (j + 6) + "+V" + (j + 6) + "+W" + (j + 6) + "+Y" + (j + 6) + ">0,INPUT!$D$12,IF(J" + (j + 6) + "+P" + (j + 6) + "+Q"
-                                 + (j + 6) + ">0,INPUT!$F$12,IF(C" + (j + 6) + "=\"E\",INPUT!$H$12,INPUT!$F$12)))";
-
-                            // Stud Grade
-                            wsCalcTable.get_Range("G" + (6 + j)).Value = "=IF(K" + (j + 6) + "+L" + (j + 6) + "+M" + (j + 6) + "+N" + (j + 6) + "+R" + (j + 6) + "+S" + (j + 6)
-                                + "+T" + (j + 6) + "+U" + (j + 6) + "+V" + (j + 6) + "+W" + (j + 6) + "+Y" + (j + 6) + ">0,INPUT!$D$13,IF(J" + (j + 6) + "+P" + (j + 6) + "+Q"
-                                + (j + 6) + ">0,INPUT!$F$13,IF(C" + (j + 6) + "=\"E\",INPUT!$H$13,INPUT!$F$13)))";
-
-                            wsCalcTable.get_Range("H" + (6 + j)).Value = 0;                                     // Stud Add'l DL
-                            wsCalcTable.get_Range("I" + (6 + j)).Value = 0;                                     // Stud Add'l LL
-
-                            // Truss Trib Lengths
-                            wsCalcTable.get_Range("J" + (6 + j), "N" + (6 + j)).Value = 0;
-                            foreach(trussMatch trussElement in studElement.trussMatches)
+                            if (trussElement.trussType == 'R')
                             {
-                                if (trussElement.trussType == 'R')
-                                {
-                                    wsCalcTable.get_Range("J" + (6 + j)).Value = (wsCalcTable.get_Range("J" + (6 + j)).Value + trussElement.trussLength);
-                                }
-                                if (trussElement.trussType == 'U')
-                                {
-                                    wsCalcTable.get_Range("K" + (6 + j)).Value = (wsCalcTable.get_Range("K" + (6 + j)).Value + trussElement.trussLength);
-                                }
-                                if (trussElement.trussType == 'B')
-                                {
-                                    wsCalcTable.get_Range("L" + (6 + j)).Value = (wsCalcTable.get_Range("L" + (6 + j)).Value + trussElement.trussLength);
-                                }
-                                if (trussElement.trussType == 'C')
-                                {
-                                    wsCalcTable.get_Range("M" + (6 + j)).Value = (wsCalcTable.get_Range("M" + (6 + j)).Value + trussElement.trussLength);
-                                }
-                                if (trussElement.trussType == 'O')
-                                {
-                                    wsCalcTable.get_Range("N" + (6 + j)).Value = (wsCalcTable.get_Range("N" + (6 + j)).Value + trussElement.trussLength);
-                                }
+                                wsCalcTable.get_Range("J" + (6 + j)).Value = (wsCalcTable.get_Range("J" + (6 + j)).Value + trussElement.trussLength);
                             }
-                            wsCalcTable.get_Range("O" + (6 + j)).Value = "='L" + i + " Calc Table'!H2";         // Stud Wall Height (per level)
-
-                            // Reactions Above Formulas
-                            if (i == iLevel)
+                            if (trussElement.trussType == 'U')
                             {
-                                wsCalcTable.get_Range("P" + (6 + j)).Value = "=H" + (j + 6);                    // Roof DL Rxn Above
-                                wsCalcTable.get_Range("Q" + (6 + j)).Value = "=I" + (j + 6);                    // Roof LL Rxn Above
-                                wsCalcTable.get_Range("R" + (6 + j), "Y" + (6 + j)).Value = 0;                  // All other Rxns Above
+                                wsCalcTable.get_Range("K" + (6 + j)).Value = (wsCalcTable.get_Range("K" + (6 + j)).Value + trussElement.trussLength);
+                            }
+                            if (trussElement.trussType == 'B')
+                            {
+                                wsCalcTable.get_Range("L" + (6 + j)).Value = (wsCalcTable.get_Range("L" + (6 + j)).Value + trussElement.trussLength);
+                            }
+                            if (trussElement.trussType == 'C')
+                            {
+                                wsCalcTable.get_Range("M" + (6 + j)).Value = (wsCalcTable.get_Range("M" + (6 + j)).Value + trussElement.trussLength);
+                            }
+                            if (trussElement.trussType == 'O')
+                            {
+                                wsCalcTable.get_Range("N" + (6 + j)).Value = (wsCalcTable.get_Range("N" + (6 + j)).Value + trussElement.trussLength);
+                            }
+                        }
+                        wsCalcTable.get_Range("O" + (6 + j)).Value = "='L" + i + " Calc Table'!H2";         // Stud Wall Height (per level)
+
+                        // Reactions Above Formulas
+                        if (i == iLevel)
+                        {
+                            wsCalcTable.get_Range("P" + (6 + j)).Value = "=H" + (j + 6);                    // Roof DL Rxn Above
+                            wsCalcTable.get_Range("Q" + (6 + j)).Value = "=I" + (j + 6);                    // Roof LL Rxn Above
+                            wsCalcTable.get_Range("R" + (6 + j), "Y" + (6 + j)).Value = 0;                  // All other Rxns Above
+                        }
+                        else
+                        {
+                            wsCalcTable.get_Range("P" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",44,FALSE),0),0)";
+                            wsCalcTable.get_Range("Q" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",45,FALSE),0),0)";
+                            wsCalcTable.get_Range("R" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",46,FALSE),0),0)";
+                            wsCalcTable.get_Range("S" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",47,FALSE),0),0)";
+                            wsCalcTable.get_Range("T" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",48,FALSE),0),0)";
+                            wsCalcTable.get_Range("U" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",49,FALSE),0),0)";
+                            wsCalcTable.get_Range("V" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",50,FALSE),0),0)";
+                            wsCalcTable.get_Range("W" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",51,FALSE),0),0)";
+                            wsCalcTable.get_Range("X" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",52,FALSE),0),0)+ H" + (j + 6);
+                            wsCalcTable.get_Range("Y" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:Y"
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",53,FALSE),0),0)+ I" + (j + 6);
+                        }
+                        wsCalcTable.get_Range("Z" + (6 + j)).Value = "=INPUT!$D$16";                        // Unbraced Lx
+                        wsCalcTable.get_Range("AA" + (6 + j)).Value = "=INPUT!$D$17";                       // Unbraced Ly
+
+                        // Stud Callout Size Formula
+                        wsCalcTable.get_Range("AD" + (6 + j)).Value = "=IFERROR(IF(AB" + (j + 6) + "<>\"\",HLOOKUP(AB" + (j + 6) + ",'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + "=1,2,IF(D" + (j + 6) + 
+                            "=2,4,IF(D" + (j + 6) + "=3,6,IF(D" + (j + 6) + "=4,8,IF(D" + (j + 6) + "=5,10,12))))),FALSE),HLOOKUP(LEFT(AC" + (j + 6) + ",3),'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + 
+                            "=1,2,IF(D" + (j + 6) + "=2,4,IF(D" + (j + 6) + "=3,6,IF(D" + (j + 6) + "=4,8,IF(D" + (j + 6) + "=5,10,12))))),FALSE)),\"\")";
+
+                        // Stud Callout Spacing Formula
+                        wsCalcTable.get_Range("AE" + (6 + j)).Value = "=IFERROR(IF(AB" + (j + 6) + "<>\"\",HLOOKUP(AB" + (j + 6) + ",'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + "=1,3,IF(D" + (j + 6) +
+                            "=2,5,IF(D" + (j + 6) + "=3,7,IF(D" + (j + 6) + "=4,9,IF(D" + (j + 6) + "=5,11,13))))),FALSE),HLOOKUP(LEFT(AC" + (j + 6) + ",3),'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) +
+                            "=1,3,IF(D" + (j + 6) + "=2,5,IF(D" + (j + 6) + "=3,7,IF(D" + (j + 6) + "=4,9,IF(D" + (j + 6) + "=5,11,13))))),FALSE)),24)";
+
+                        // OK and NG flags for Current Level
+                        wsCalcTable.get_Range("AK" + (6 + j)).Value = "=IF(OR(AF" + (j + 6) + ">1,IF(INPUT!$I$20=\"Yes\",IF(O" + (j + 6) + "*12*INPUT!$I$24/(E" + (j + 6) + "-0.5)>33,AG" + (j + 6) + 
+                            ">1),AG" + (j + 6) + ">1),AH" + (j + 6) + ">INPUT!$I$7,AI" + (j + 6) + "<AJ" + (j + 6) + "),\"N.G.\",IF(AND(AF" + (j + 6) + "<=1,AG" + (j + 6) + "<=1,AH" + (j + 6) + 
+                            "<=1,AI" + (j + 6) + ">=AJ" + (j + 6) + "),\"O.K.\",\"Confirm\"))";
+
+                        // OK and NG flags for Levels Below (Dynamic formula builder)
+                        for (int k = (i - 1); k > 0; k--)
+                        {
+                            if (k == (i - 1))
+                            {
+                                formula.Append("=IFERROR(INDEX('L").Append((i - 1)).Append(" Calc Table'!AK6:AK").Append((arrStud.Count(n => n.level == (i - 1)) + 6)).Append(",MATCH(AR").Append((j + 6))
+                                .Append(",'L").Append((i - 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
+                                wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, k].Value = formula.ToString();
+                                formula.Clear();
                             }
                             else
                             {
-                                wsCalcTable.get_Range("P" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",44,FALSE),0),0)";
-                                wsCalcTable.get_Range("Q" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",45,FALSE),0),0)";
-                                wsCalcTable.get_Range("R" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",46,FALSE),0),0)";
-                                wsCalcTable.get_Range("S" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",47,FALSE),0),0)";
-                                wsCalcTable.get_Range("T" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",48,FALSE),0),0)";
-                                wsCalcTable.get_Range("U" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",49,FALSE),0),0)";
-                                wsCalcTable.get_Range("V" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",50,FALSE),0),0)";
-                                wsCalcTable.get_Range("W" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",51,FALSE),0),0)";
-                                wsCalcTable.get_Range("X" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",52,FALSE),0),0)+ H" + (j + 6);
-                                wsCalcTable.get_Range("Y" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:Y"
-                                    + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",53,FALSE),0),0)+ I" + (j + 6);
-                            }
-                            wsCalcTable.get_Range("Z" + (6 + j)).Value = "=INPUT!$D$16";                        // Unbraced Lx
-                            wsCalcTable.get_Range("AA" + (6 + j)).Value = "=INPUT!$D$17";                       // Unbraced Ly
-
-                            // Stud Callout Size Formula
-                            wsCalcTable.get_Range("AD" + (6 + j)).Value = "=IFERROR(IF(AB" + (j + 6) + "<>\"\",HLOOKUP(AB" + (j + 6) + ",'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + "=1,2,IF(D" + (j + 6) + 
-                                "=2,4,IF(D" + (j + 6) + "=3,6,IF(D" + (j + 6) + "=4,8,IF(D" + (j + 6) + "=5,10,12))))),FALSE),HLOOKUP(LEFT(AC" + (j + 6) + ",3),'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + 
-                                "=1,2,IF(D" + (j + 6) + "=2,4,IF(D" + (j + 6) + "=3,6,IF(D" + (j + 6) + "=4,8,IF(D" + (j + 6) + "=5,10,12))))),FALSE)),\"\")";
-
-                            // Stud Callout Spacing Formula
-                            wsCalcTable.get_Range("AE" + (6 + j)).Value = "=IFERROR(IF(AB" + (j + 6) + "<>\"\",HLOOKUP(AB" + (j + 6) + ",'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) + "=1,3,IF(D" + (j + 6) +
-                                "=2,5,IF(D" + (j + 6) + "=3,7,IF(D" + (j + 6) + "=4,9,IF(D" + (j + 6) + "=5,11,13))))),FALSE),HLOOKUP(LEFT(AC" + (j + 6) + ",3),'Stud Schedule'!B2:AQ14,IF(D" + (j + 6) +
-                                "=1,3,IF(D" + (j + 6) + "=2,5,IF(D" + (j + 6) + "=3,7,IF(D" + (j + 6) + "=4,9,IF(D" + (j + 6) + "=5,11,13))))),FALSE)),24)";
-
-                            // OK and NG flags for Current Level
-                            wsCalcTable.get_Range("AK" + (6 + j)).Value = "=IF(OR(AF" + (j + 6) + ">1,IF(INPUT!$I$20=\"Yes\",IF(O" + (j + 6) + "*12*INPUT!$I$24/(E" + (j + 6) + "-0.5)>33,AG" + (j + 6) + 
-                                ">1),AG" + (j + 6) + ">1),AH" + (j + 6) + ">INPUT!$I$7,AI" + (j + 6) + "<AJ" + (j + 6) + "),\"N.G.\",IF(AND(AF" + (j + 6) + "<=1,AG" + (j + 6) + "<=1,AH" + (j + 6) + 
-                                "<=1,AI" + (j + 6) + ">=AJ" + (j + 6) + "),\"O.K.\",\"Confirm\"))";
-
-                            // OK and NG flags for Levels Below (Dynamic formula builder)
-                            for (int k = (i - 1); k > 0; k--)
-                            {
-                                if (k == (i - 1))
+                                formula.Append("=IFERROR(INDEX('L").Append((i - 1)).Append(" Calc Table'!AR6:AR").Append((arrStud.Count(n => n.level == (i - 1)) + 6)).Append(",MATCH(AR").Append((j + 6))
+                                .Append(",'L").Append((i - 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
+                                for (int m = (i - 2); m >= k; m--)
                                 {
-                                    formula.Append("=IFERROR(INDEX('L").Append((i - 1)).Append(" Calc Table'!AK6:AK").Append((arrStud.Count(n => n.level == (i - 1)) + 6)).Append(",MATCH(AR").Append((j + 6))
-                                    .Append(",'L").Append((i - 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
-                                    wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, k].Value = formula.ToString();
-                                    formula.Clear();
-                                }
-                                else
-                                {
-                                    formula.Append("=IFERROR(INDEX('L").Append((i - 1)).Append(" Calc Table'!AR6:AR").Append((arrStud.Count(n => n.level == (i - 1)) + 6)).Append(",MATCH(AR").Append((j + 6))
-                                    .Append(",'L").Append((i - 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
-                                    for (int m = (i - 2); m >= k; m--)
+                                    if (m == k)
                                     {
-                                        if (m == k)
-                                        {
-                                            formula.Insert(9, "INDEX('L" + m + " Calc Table'!AK6:AK" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
-                                            formula.Remove(formula.Length - 9, 9);
-                                            formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
-                                        }
-                                        else
-                                        {
-                                            formula.Insert(9, "INDEX('L" + m + " Calc Table'!AR6:AR" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
-                                            formula.Remove(formula.Length - 9, 9);
-                                            formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
-                                        }
+                                        formula.Insert(9, "INDEX('L" + m + " Calc Table'!AK6:AK" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
+                                        formula.Remove(formula.Length - 9, 9);
+                                        formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
                                     }
-                                    wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, k].Value = formula.ToString();
-                                    formula.Clear();
-                                }
-                            }
-
-                            // OK and NG flags for Levels Above (Dynamic formula builder)
-                            for (int k = (i + 1); k <= iLevel; k++)
-                            {
-                                if (k == (i + 1))
-                                {
-                                    formula.Append("=IFERROR(INDEX('L").Append(k).Append(" Calc Table'!AK6:AK").Append((arrStud.Count(n => n.level == k) + 6)).Append(",MATCH(AQ").Append((j + 6))
-                                        .Append(",'L").Append(k).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == k) + 6)).Append(",0),1),\"N/A\")");
-                                    wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, (k - 1)].Value = formula.ToString();
-                                    formula.Clear();
-                                }
-                                else
-                                {
-                                    formula.Append("=IFERROR(INDEX('L").Append((i + 1)).Append(" Calc Table'!AQ6:AQ").Append((arrStud.Count(n => n.level == (i + 1)) + 6)).Append(",MATCH(AQ").Append((j + 6))
-                                    .Append(",'L").Append((i + 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
-                                    for (int m = (i + 2); m <= k; m++)
+                                    else
                                     {
-                                        if (m == k)
-                                        {
-                                            formula.Insert(9, "INDEX('L" + m + " Calc Table'!AK6:AK" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
-                                            formula.Remove(formula.Length - 9, 9);
-                                            formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
-                                        }
-                                        else
-                                        {
-                                            formula.Insert(9, "INDEX('L" + m + " Calc Table'!AQ6:AQ" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
-                                            formula.Remove(formula.Length - 9, 9);
-                                            formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
-                                        }
+                                        formula.Insert(9, "INDEX('L" + m + " Calc Table'!AR6:AR" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
+                                        formula.Remove(formula.Length - 9, 9);
+                                        formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
                                     }
-                                    wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, (k - 1)].Value = formula.ToString();
-                                    formula.Clear();
                                 }
+                                wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, k].Value = formula.ToString();
+                                formula.Clear();
                             }
-                            
-                            // Stud Match Above Label
-                            if (i != iLevel)
-                            {
-                                wsCalcTable.get_Range("AQ" + (6 + j)).Value = studElement.studMatch;
-                            }
-
-                            // Stud Match Below Label Formula
-                            if (i != 1)
-                            {
-                                wsCalcTable.get_Range("AR" + (6 + j)).Value = "=IFERROR(INDEX('L" + (i-1) + " Calc Table'!B6:B" + (arrStud.Count(n => n.level == (i-1)) + 6)
-                                    + ",MATCH(B" + (j + 6) + ",'L" + (i - 1) + " Calc Table'!AQ6:AQ" + (arrStud.Count(n => n.level == (i - 1)) + 6) + ",0)),\"\")";
-                            }
-
-                            wsCalcTable.get_Range("AS" + (6 + j)).Value = "=IFERROR(J" + (j + 6) + "*INPUT!D25, 0)";                                // Roof DL Rxn Current
-                            wsCalcTable.get_Range("AT" + (6 + j)).Value = "=IFERROR(J" + (j + 6) + "*MAX(INPUT!D23,INPUT!D24,INPUT!D26), 0)";       // Roof LL Rxn Current
-                            wsCalcTable.get_Range("AU" + (6 + j)).Value = "=IFERROR(K" + (j + 6) + "*INPUT!D27, 0)";                                // Unit DL Rxn Current
-                            wsCalcTable.get_Range("AV" + (6 + j)).Value = "=IFERROR(K" + (j + 6) + "*INPUT!D28, 0)";                                // Unit LL Rxn Current
-                            wsCalcTable.get_Range("AW" + (6 + j)).Value = "=IFERROR(L" + (j + 6) + "*INPUT!D29, 0)";                                // Balc DL Rxn Current
-                            wsCalcTable.get_Range("AX" + (6 + j)).Value = "=IFERROR(L" + (j + 6) + "*INPUT!D30, 0)";                                // Balc LL Rxn Current
-                            wsCalcTable.get_Range("AY" + (6 + j)).Value = "=IFERROR(M" + (j + 6) + "*INPUT!D31, 0)";                                // Corr DL Rxn Current
-                            wsCalcTable.get_Range("AZ" + (6 + j)).Value = "=IFERROR(M" + (j + 6) + "*INPUT!D32, 0)";                                // Corr LL Rxn Current
-                            wsCalcTable.get_Range("BB" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D33+IF(C" + (j + 6) + "=\"I\",INPUT!D35*O" + (j + 6) + ",INPUT!D36*O" + (j + 6) + "), 0)";                                // Other DL Rxn Current
-                            wsCalcTable.get_Range("BA" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D34, 0)";                                // Other LL Rxn Current
-                            wsCalcTable.get_Range("BC" + (6 + j)).Value = studElement.Xstart;                                                       // X Start Coord
-                            wsCalcTable.get_Range("BD" + (6 + j)).Value = studElement.Ystart;                                                       // Y Start Coord
-                            wsCalcTable.get_Range("BE" + (6 + j)).Value = studElement.Xend;                                                         // X End Coord
-                            wsCalcTable.get_Range("BF" + (6 + j)).Value = studElement.Yend;                                                         // Y End Coord
-
-                            MediationProgress.progressBar.Increment(1);
-                            j++;
                         }
-                    }
 
-                    MediationProgress.progressBar.Increment(1);
+                        // OK and NG flags for Levels Above (Dynamic formula builder)
+                        for (int k = (i + 1); k <= iLevel; k++)
+                        {
+                            if (k == (i + 1))
+                            {
+                                formula.Append("=IFERROR(INDEX('L").Append(k).Append(" Calc Table'!AK6:AK").Append((arrStud.Count(n => n.level == k) + 6)).Append(",MATCH(AQ").Append((j + 6))
+                                    .Append(",'L").Append(k).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == k) + 6)).Append(",0),1),\"N/A\")");
+                                wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, (k - 1)].Value = formula.ToString();
+                                formula.Clear();
+                            }
+                            else
+                            {
+                                formula.Append("=IFERROR(INDEX('L").Append((i + 1)).Append(" Calc Table'!AQ6:AQ").Append((arrStud.Count(n => n.level == (i + 1)) + 6)).Append(",MATCH(AQ").Append((j + 6))
+                                .Append(",'L").Append((i + 1)).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == 1) + 6)).Append(",0),1),\"N/A\")");
+                                for (int m = (i + 2); m <= k; m++)
+                                {
+                                    if (m == k)
+                                    {
+                                        formula.Insert(9, "INDEX('L" + m + " Calc Table'!AK6:AK" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
+                                        formula.Remove(formula.Length - 9, 9);
+                                        formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
+                                    }
+                                    else
+                                    {
+                                        formula.Insert(9, "INDEX('L" + m + " Calc Table'!AQ6:AQ" + (arrStud.Count(n => n.level == m) + 6) + ",MATCH(");
+                                        formula.Remove(formula.Length - 9, 9);
+                                        formula.Append("1),'L").Append(m).Append(" Calc Table'!B6:B").Append((arrStud.Count(n => n.level == m) + 6)).Append(",0),1),\"N/A\")");
+                                    }
+                                }
+                                wsCalcTable.get_Range("AK" + (6 + j)).Offset[0, (k - 1)].Value = formula.ToString();
+                                formula.Clear();
+                            }
+                        }
+                            
+                        // Stud Match Above Label
+                        if (i != iLevel)
+                        {
+                            wsCalcTable.get_Range("AQ" + (6 + j)).Value = studElement.studMatch;
+                        }
+
+                        // Stud Match Below Label Formula
+                        if (i != 1)
+                        {
+                            wsCalcTable.get_Range("AR" + (6 + j)).Value = "=IFERROR(INDEX('L" + (i-1) + " Calc Table'!B6:B" + (arrStud.Count(n => n.level == (i-1)) + 6)
+                                + ",MATCH(B" + (j + 6) + ",'L" + (i - 1) + " Calc Table'!AQ6:AQ" + (arrStud.Count(n => n.level == (i - 1)) + 6) + ",0)),\"\")";
+                        }
+
+                        wsCalcTable.get_Range("AS" + (6 + j)).Value = "=IFERROR(J" + (j + 6) + "*INPUT!D25, 0)";                                // Roof DL Rxn Current
+                        wsCalcTable.get_Range("AT" + (6 + j)).Value = "=IFERROR(J" + (j + 6) + "*MAX(INPUT!D23,INPUT!D24,INPUT!D26), 0)";       // Roof LL Rxn Current
+                        wsCalcTable.get_Range("AU" + (6 + j)).Value = "=IFERROR(K" + (j + 6) + "*INPUT!D27, 0)";                                // Unit DL Rxn Current
+                        wsCalcTable.get_Range("AV" + (6 + j)).Value = "=IFERROR(K" + (j + 6) + "*INPUT!D28, 0)";                                // Unit LL Rxn Current
+                        wsCalcTable.get_Range("AW" + (6 + j)).Value = "=IFERROR(L" + (j + 6) + "*INPUT!D29, 0)";                                // Balc DL Rxn Current
+                        wsCalcTable.get_Range("AX" + (6 + j)).Value = "=IFERROR(L" + (j + 6) + "*INPUT!D30, 0)";                                // Balc LL Rxn Current
+                        wsCalcTable.get_Range("AY" + (6 + j)).Value = "=IFERROR(M" + (j + 6) + "*INPUT!D31, 0)";                                // Corr DL Rxn Current
+                        wsCalcTable.get_Range("AZ" + (6 + j)).Value = "=IFERROR(M" + (j + 6) + "*INPUT!D32, 0)";                                // Corr LL Rxn Current
+                        wsCalcTable.get_Range("BB" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D33+IF(C" + (j + 6) + "=\"I\",INPUT!D35*O" + (j + 6) + ",INPUT!D36*O" + (j + 6) + "), 0)";                                // Other DL Rxn Current
+                        wsCalcTable.get_Range("BA" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D34, 0)";                                // Other LL Rxn Current
+                        wsCalcTable.get_Range("BC" + (6 + j)).Value = studElement.Xstart;                                                       // X Start Coord
+                        wsCalcTable.get_Range("BD" + (6 + j)).Value = studElement.Ystart;                                                       // Y Start Coord
+                        wsCalcTable.get_Range("BE" + (6 + j)).Value = studElement.Xend;                                                         // X End Coord
+                        wsCalcTable.get_Range("BF" + (6 + j)).Value = studElement.Yend;                                                         // Y End Coord
+
+                        MediationProgress.progressBar.Increment(1);
+                        j++;
+                    }
                 }
 
-                // Set Calculation to Automatic after populating
-                Application.Calculation = Excel.XlCalculation.xlCalculationAutomatic;
+                MediationProgress.progressBar.Increment(1);
+            }
+
+            // Set Calculation to Automatic after populating
+            Application.Calculation = Excel.XlCalculation.xlCalculationAutomatic;
+
+            return;
+        }
+
+        // AutoDesign() -- Designs the stud analysis and scheduling for individual studs, populates schedule for dynamic scheduling
+        public void AutoDesign(ref List<RawLineData> arrStud, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
+        {
+            /* AutoDesign() -- Called from DataSort() after Stud Calc Packs are populated.
+             * Handles the stud analysis and schedule assignment of individual studs and then
+             * creates a dynamic scheduling table for the user to handle scheduling design. */
+
+            try
+            {
+                // Declarations
+                Excel.Worksheet wsStudAnalyze = Application.Worksheets.get_Item("STUD ANALYSIS");    // Individual Stud Analysis worksheet
+                Excel.Worksheet wsSchedule = Application.Worksheets.get_Item("Stud Schedule");       // Stud Schedule worksheet
+                int k = new int();                                                                   // Counters to cycle through workbook
+                bool unityContinue = true;                                                           // Check to see if tested all stud types
+                string CompUnity = "x"; string BendUnity = "x";                                      // Unity flags to check for schedule match
+                string IntUnity = "x"; string DefUnity = "x"; string DefUnity2 = "x";
+
+                for (int i = 1; i <= iLevel; i++)
+                {
+                    Excel.Worksheet wsCalcTable = Application.Worksheets.get_Item("L" + i + " Calc Table");
+
+                    for (int j = 0; j < arrStud.Count(n => n.level == i); j++)
+                    {
+                        /*** BEGIN COPYING OVER DATA TO ANAlYZE STUD ***/
+                        // Interior/Exterior
+                        if (wsCalcTable.get_Range("C" + (6 + j)).Value == "E")
+                        {
+                            wsStudAnalyze.get_Range("C6").Value = "Exterior";
+                        }
+                        if (wsCalcTable.get_Range("C" + (6 + j)).Value == "I")
+                        {
+                            wsStudAnalyze.get_Range("C6").Value = "Interior";
+                        }
+
+                        wsStudAnalyze.get_Range("D6").Value = wsCalcTable.get_Range("B" + (6 + j)).Value;       // Stud Label
+                        wsStudAnalyze.get_Range("G6").Value = i;                                                // Level
+                        wsStudAnalyze.get_Range("D17").Value = wsCalcTable.get_Range("P" + (6 + j)).Value;      // Roof DL Rxn
+                        wsStudAnalyze.get_Range("E17").Value = wsCalcTable.get_Range("Q" + (6 + j)).Value;      // Roof LL Rxn
+                        wsStudAnalyze.get_Range("F10").Value = wsCalcTable.get_Range("J" + (6 + j)).Value;      // Roof Trib Length
+                        wsStudAnalyze.get_Range("D18").Value = wsCalcTable.get_Range("R" + (6 + j)).Value;      // Unit DL Rxn
+                        wsStudAnalyze.get_Range("E18").Value = wsCalcTable.get_Range("S" + (6 + j)).Value;      // Unit LL Rxn
+                        wsStudAnalyze.get_Range("F11").Value = wsCalcTable.get_Range("K" + (6 + j)).Value;      // Unit Trib Length
+                        wsStudAnalyze.get_Range("D19").Value = wsCalcTable.get_Range("T" + (6 + j)).Value;      // Balcony DL Rxn
+                        wsStudAnalyze.get_Range("E19").Value = wsCalcTable.get_Range("U" + (6 + j)).Value;      // Balcony LL Rxn
+                        wsStudAnalyze.get_Range("F12").Value = wsCalcTable.get_Range("L" + (6 + j)).Value;      // Balcony Trib Length
+                        wsStudAnalyze.get_Range("D20").Value = wsCalcTable.get_Range("V" + (6 + j)).Value;      // Corridor DL Rxn
+                        wsStudAnalyze.get_Range("E20").Value = wsCalcTable.get_Range("W" + (6 + j)).Value;      // Corridor LL Rxn
+                        wsStudAnalyze.get_Range("F13").Value = wsCalcTable.get_Range("M" + (6 + j)).Value;      // Corridor Trib Length
+                        wsStudAnalyze.get_Range("D21").Value = wsCalcTable.get_Range("X" + (6 + j)).Value;      // Other DL Rxn
+                        wsStudAnalyze.get_Range("E21").Value = wsCalcTable.get_Range("Y" + (6 + j)).Value;      // Other LL Rxn
+                        wsStudAnalyze.get_Range("F14").Value = wsCalcTable.get_Range("N" + (6 + j)).Value;      // Other Trib Length
+                        wsStudAnalyze.get_Range("J21").Value = arrDesignData[3 + i];                            // Wall Height
+                        wsStudAnalyze.get_Range("E28").Value = arrDesignData[42 + i];                           // Unbraced Column Length Lx
+                        wsStudAnalyze.get_Range("E29").Value = arrDesignData[48 + i];                           // Unbraced Column Length Ly
+                        wsStudAnalyze.get_Range("M21").Value = wsCalcTable.get_Range("F" + (6 + j)).Value;      // Stud Species
+                        wsStudAnalyze.get_Range("M22").Value = wsCalcTable.get_Range("G" + (6 + j)).Value;      // Stud Grade
+
+                        // Input schedule data to find unity match
+                        k = 1;
+                        while ((CompUnity != "O.K." && BendUnity != "O.K." && IntUnity != "O.K." && DefUnity != "O.K." && DefUnity2 != "O.K.") || unityContinue == true)
+                        {
+                            if (wsCalcTable.get_Range("E" + (6 + j)).Value == 4)
+                            {
+                                wsStudAnalyze.get_Range("J11").Value = wsSchedule.get_Range("AF2").Offset[((2 * i) - 1), k];     // Stud Column Type
+                                wsStudAnalyze.get_Range("J12").Value = wsSchedule.get_Range("AF3").Offset[((2 * i) - 1), k];     // Stud Spacing
+
+                                // Store Unity Flags from analysis sheet
+                                CompUnity = wsStudAnalyze.get_Range("K54").Value;
+                                BendUnity = wsStudAnalyze.get_Range("K63").Value;
+                                IntUnity = wsStudAnalyze.get_Range("K81").Value;
+                                DefUnity = wsStudAnalyze.get_Range("M17").Value;
+                                DefUnity2 = wsStudAnalyze.get_Range("K83").Value;
+                                
+                                k++;
+                                if (k >= 7)
+                                    unityContinue = false;
+                            }
+
+                            if (wsCalcTable.get_Range("E" + (6 + j)).Value != 4)
+                            {
+                                wsStudAnalyze.get_Range("J11").Value = wsSchedule.get_Range("AM2").Offset[((2 * i) - 1), k];     // Stud Column Type
+                                wsStudAnalyze.get_Range("J12").Value = wsSchedule.get_Range("AM3").Offset[((2 * i) - 1), k];     // Stud Spacing
+
+                                // Store Unity Flags from analysis sheet
+                                CompUnity = wsStudAnalyze.get_Range("K54").Value;
+                                BendUnity = wsStudAnalyze.get_Range("K63").Value;
+                                IntUnity = wsStudAnalyze.get_Range("K81").Value;
+                                DefUnity = wsStudAnalyze.get_Range("M17").Value;
+                                DefUnity2 = wsStudAnalyze.get_Range("K83").Value;
+                                
+                                k++;
+                                if (k >= 5)
+                                    unityContinue = false;
+                            }
+                        }
+
+                        // Copy Unity values or flags over to calc tables
+                        if (CompUnity == "ERROR!!")
+                            wsCalcTable.get_Range("AF" + (j + 6)).Value = CompUnity;
+                        else
+                            wsCalcTable.get_Range("AF" + (j + 6)).Value = wsStudAnalyze.get_Range("K64").Value;
+                        if (BendUnity == "ERROR!!")
+                            wsCalcTable.get_Range("AG" + (j + 6)).Value = BendUnity;
+                        else
+                            wsCalcTable.get_Range("AG" + (j + 6)).Value = wsStudAnalyze.get_Range("K55").Value;
+                        if (IntUnity == "ERROR!!")
+                            wsCalcTable.get_Range("AH" + (j + 6)).Value = IntUnity;
+                        else
+                            wsCalcTable.get_Range("AH" + (j + 6)).Value = wsStudAnalyze.get_Range("E81").Value;
+                        if (DefUnity == "ERROR!!")
+                            wsCalcTable.get_Range("AI" + (j + 6)).Value = DefUnity;
+                        else
+                            wsCalcTable.get_Range("AI" + (j + 6)).Value = wsStudAnalyze.get_Range("G83").Value;
+                        if (DefUnity2 == "ERROR!!")
+                            wsCalcTable.get_Range("AJ" + (j + 6)).Value = DefUnity2;
+                        else
+                            wsCalcTable.get_Range("AJ" + (j + 6)).Value = wsStudAnalyze.get_Range("I83").Value;
+
+                        // Copy Schedule value over to calc tables
+                        if (wsCalcTable.get_Range("E" + (6 + j)).Value == 4)
+                        {
+                            wsCalcTable.get_Range("AC" + (j + 6)).Value = wsSchedule.get_Range("AF2").Offset[0, k];
+                        }
+                        if (wsCalcTable.get_Range("E" + (6 + j)).Value != 4)
+                        {
+                            wsCalcTable.get_Range("AC" + (j + 6)).Value = wsSchedule.get_Range("AM2").Offset[0, k];
+                        }
+
+                        // Reset Counter
+                        k = 0;
+
+                        // Increment Progress Bar
+                        MediationProgress.progressBar.Increment(1);
+                    }
+
+                    // Increment Progress Bar
+                    MediationProgress.progressBar.Increment(1);
+                }
             }
             catch (Exception e) { MessageBox.Show(e.Message); }
             return;
