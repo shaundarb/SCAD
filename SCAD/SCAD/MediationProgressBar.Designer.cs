@@ -45,8 +45,10 @@
             this.ClientSize = new System.Drawing.Size(329, 55);
             this.Controls.Add(this.progressBar);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.MaximizeBox = false;
             this.Name = "MediationProgressBar";
-            this.Text = "Please wait... SCAD is Mediating Lines";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Please wait... SCAD is Mediating and Designing Lines";
             this.ResumeLayout(false);
 
         }

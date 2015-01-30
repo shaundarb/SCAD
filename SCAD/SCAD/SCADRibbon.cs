@@ -18,14 +18,8 @@ namespace SCAD
 
         private void LaunchStuds_Click(object sender, RibbonControlEventArgs e)
         {
-            /* Calls the StudDesign() function from SCADMain. This function 
-             * returns a string to ensure it has been called successfully
-             * and then displays it.*/
-            string Response = Globals.SCADMain.StudDesign();
-            if (Response != null)
-            {
-                MessageBox.Show(Response);
-            }
+            /* Calls the StudDesign() function from SCADMain. To begin.*/
+            Globals.SCADMain.StudDesign();
         }
 
         private void SetStudCallout_Click(object sender, RibbonControlEventArgs e)

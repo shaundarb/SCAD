@@ -137,7 +137,7 @@ namespace SCAD
         /******************** STUD DESIGN methods *******************/
 
         // StudDesign() -- Begins initial Stud Design from Data.
-        public string StudDesign()
+        public void StudDesign()
         {
             /* StudDesign() -- called by clicking "Launch SCAD" button on SCAD Ribbon
              * Proceeds to process Raw AutoCAD Stud data from Excel file and passes design
@@ -150,28 +150,16 @@ namespace SCAD
             // If Cancel is clicked, so prompt isn't displayed.
             if (StudForm.StudCancel == true)
             {
-                return null;
+                return;
             }
 
             // Create local arrDataSort[] array from form values
             object[] arrDesignDataSort = new object[61];
             arrDesignDataSort = StudForm.arrDesignData;
 
-            // Pass design parameter data array to sorting routine
-            this.DataSort(arrDesignDataSort);
-            
-            return "Now back to SCADRibbon.";
-        }
-
-        // DataSort() -- Sorts Raw data from AutoCAD export file so it is ready for Horizontal and Vertical matching
-        public void DataSort(object[] arrDesignData)
-        {
-            /* DataSort() -- called by StudDesign() after design parameters have been passed
-                * from StudForm into arrRawData[] array. This routine then parses the AutoCAD
-                * excel data file and sorts it into appropriate line type arrays (Stud Walls, Loads, etc). */
-
             // Declarations for arrays to hold sorted, unsorted, and line types.
-            //List<StudLineData> arrSorted = new List<StudLineData>();
+            int iLevel = new int();                                       // Stores amount of levels
+            List<RawLineData> arrSorted = new List<RawLineData>();
             List<RawLineData> arrNotSorted = new List<RawLineData>();
             List<RawLineData> arrStud = new List<RawLineData>();
             List<RawLineData> arrTruss = new List<RawLineData>();
@@ -180,9 +168,66 @@ namespace SCAD
             List<RawLineData> arrShear = new List<RawLineData>();
             List<RawLineData> arrBeam = new List<RawLineData>();
 
+            /************ BEGIN SORTING RAW DATA ************/
+            // Pass design parameter data array to sorting routine
+            DataSort(arrDesignDataSort, ref arrSorted, ref arrNotSorted, ref arrStud, ref arrTruss, ref arrDiaphr, ref arrGap, ref arrShear, ref arrBeam, ref iLevel);
+
+            // Load Progress Bar and set final value
+            SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
+            MediationProgress.Show();
+            MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + (arrStud.Count() * 2) + 60;
+
+            /************ CREATE MEDIATION INPUT ARRAYS WORKSHEET ************/
+            // Create optional mediation input arrays worksheet if box is checked
+            if ((bool)arrDesignDataSort[58] == true)
+            {
+                MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + (arrStud.Count() * (5 / 2)) + (arrSorted.Count() * 2) + 60;
+                Arrays(ref arrSorted, ref arrDiaphr, ref arrGap, ref arrShear, ref arrTruss, ref arrStud, ref arrBeam, ref MediationProgress);
+            }
+
+            /************ FORMAT LEVEL-SPECIFIC CALC TABLES ************/
+            // Format workbook for level-specific calc tables
+            SCADBuild(arrDesignDataSort, arrStud, iLevel);
+
+            /************ START STUD MATCHING ROUTINES ************/
+            // Send arrStud, arrTruss to Horizonal Matching Routine
+            HSM(ref arrStud, ref arrTruss, arrDesignDataSort, iLevel, ref MediationProgress);
+
+            // Send arrStud, arrTruss, arrGap to Vertical Matching Routine
+            VSM(ref arrStud, ref arrTruss, arrGap, arrDesignDataSort, iLevel, ref MediationProgress);
+
+            /************ START STUD DESIGNING ROUTINES ************/
+            // Finalize population of stud workbook
+            StudCalcPopulate(ref arrStud, ref arrTruss, arrDesignDataSort, iLevel, ref MediationProgress);
+
+            // Continue onto Scheduling and Individual Stud Design
+            AutoDesign(ref arrStud, arrDesignDataSort, iLevel, ref MediationProgress);
+
+            /************ RETURN BACK TO USER FOR FINAL SCHEDULING ************/
+
+            // Reactivate Screen Updating after sorting
+            this.Application.ScreenUpdating = true;
+
+            // Unload Progress Bar
+            MediationProgress.Close();
+
+            Excel.Worksheet wsDynamicSchedule = Application.Worksheets.get_Item("Dynamic Schedule");
+            wsDynamicSchedule.Select();
+            MessageBox.Show("Mediation and Invidiual Stud Design Complete. Please begin consolidating the Dynamic Schedule.");
+            
+            return;
+        }
+
+        // DataSort() -- Sorts Raw data from AutoCAD export file so it is ready for Horizontal and Vertical matching
+        public void DataSort(object[] arrDesignData, ref List<RawLineData> arrSorted, ref List<RawLineData> arrNotSorted, ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss,
+            ref List<RawLineData> arrDiaphr, ref List<RawLineData> arrGap, ref List<RawLineData> arrShear, ref List<RawLineData> arrBeam, ref int iLevel)
+        {
+            /* DataSort() -- called by StudDesign() after design parameters have been passed
+                * from StudForm into arrRawData[] array. This routine then parses the AutoCAD
+                * excel data file and sorts it into appropriate line type arrays (Stud Walls, Loads, etc). */
+
             // Declarations for counters and sorting threshold constants
-            float fReSort = new float();        // Temporary resorting container for coordinates
-            int iLevel = new int();                 // Stores current working level for sorting
+            float fReSort = new float();            // Temporary resorting container for coordinates
             const int iStraight = 5;                // Straight line threshold
             int j, k, m = new int();                // Counters to cycle through lines
 
@@ -285,7 +330,7 @@ namespace SCAD
 
             /************ SORTING BY Y COORDINATES ************/
             // Sort data from arrNotSorted into arrSorted, from smallest to largest Y end coord
-            List<RawLineData> arrSorted = arrNotSorted.OrderBy(o => o.Yend).ToList();
+            arrSorted = arrNotSorted.OrderBy(o => o.Yend).ToList();
 
             /************ IDENTIFY LEVELS BASED ON DIAPHRAGM LINES ************/
             iLevel = 0;
@@ -636,52 +681,130 @@ namespace SCAD
                 if (studElement.direction == 'X')
                 {
                     // Determine if exterior or interior
-                    if (studElement.layer == "ENG_STUD_EXT" || studElement.layer == "ENG_STUD_4_EXT" ||
-                        studElement.layer == "ENG_STUD_6_EXT" || studElement.layer == "ENG_STUD_8_EXT")
+                    switch (studElement.layer)
                     {
-                        studElement.label = "X_" + Math.Round(studElement.Xstart, 2) + "_SE_" + j;
-                        studElement.studClass = 'E';
-                        j++;
-                    }
-                    else
-                    {
-                        studElement.label = "X_" + Math.Round(studElement.Xstart, 2) + "_SI_" + j;
-                        studElement.studClass = 'I';
-                        j++;
+                        case "ENG_STUD_4_EXT" :
+                        case "ENG_STUD_6_EXT" :
+                        case "ENG_STUD_8_EXT" :
+                            {
+                                studElement.label = "X_" + Math.Round(studElement.Xstart, 2) + "_SE_" + j;
+                                studElement.studClass = 'E';
+                                studElement.studThickness = System.Convert.ToInt32(studElement.layer.Substring(9, 1));
+                                j++;
+                                break;
+                            }
+                        case "ENG_STUD_EXT" :
+                            {
+                                studElement.label = "X_" + Math.Round(studElement.Xstart, 2) + "_SE_" + j;
+                                studElement.studClass = 'E';
+                                studElement.studThickness = 6;
+                                j++;
+                                break;
+                            }
+                        case "ENG_STUD_4_INT" :
+                        case "ENG_STUD_6_INT" :
+                        case "ENG_STUD_8_INT" :
+                            {
+                                studElement.label = "X_" + Math.Round(studElement.Xstart, 2) + "_SI_" + j;
+                                studElement.studClass = 'I';
+                                studElement.studThickness = System.Convert.ToInt32(studElement.layer.Substring(9, 1));
+                                j++;
+                                break;
+                            }
+                        default:
+                            {
+                                studElement.label = "X_" + Math.Round(studElement.Xstart, 2) + "_SI_" + j;
+                                studElement.studClass = 'I';
+                                studElement.studThickness = 4;
+                                j++;
+                                break;
+                            }
                     }
                 }
                 if (studElement.direction == 'Y')
                 {
                     // Determine if exterior or interior
-                    if (studElement.layer == "ENG_STUD_EXT" || studElement.layer == "ENG_STUD_4_EXT" ||
-                        studElement.layer == "ENG_STUD_6_EXT" || studElement.layer == "ENG_STUD_8_EXT")
+                    switch (studElement.layer)
                     {
-                        studElement.label = "Y_" + Math.Round(studElement.Ystart, 2) + "_SE_" + k;
-                        studElement.studClass = 'E';
-                        k++;
-                    }
-                    else
-                    {
-                        studElement.label = "Y_" + Math.Round(studElement.Ystart, 2) + "_SI_" + k;
-                        studElement.studClass = 'I';
-                        k++;
+                        case "ENG_STUD_4_EXT":
+                        case "ENG_STUD_6_EXT":
+                        case "ENG_STUD_8_EXT":
+                            {
+                                studElement.label = "Y_" + Math.Round(studElement.Ystart, 2) + "_SE_" + k;
+                                studElement.studClass = 'E';
+                                studElement.studThickness = System.Convert.ToInt32(studElement.layer.Substring(9, 1));
+                                k++;
+                                break;
+                            }
+                        case "ENG_STUD_EXT":
+                            {
+                                studElement.label = "Y_" + Math.Round(studElement.Ystart, 2) + "_SE_" + k;
+                                studElement.studClass = 'E';
+                                studElement.studThickness = 6;
+                                k++;
+                                break;
+                            }
+                        case "ENG_STUD_4_INT":
+                        case "ENG_STUD_6_INT":
+                        case "ENG_STUD_8_INT":
+                            {
+                                studElement.label = "Y_" + Math.Round(studElement.Ystart, 2) + "_SI_" + k;
+                                studElement.studClass = 'I';
+                                studElement.studThickness = System.Convert.ToInt32(studElement.layer.Substring(9, 1));
+                                k++;
+                                break;
+                            }
+                        default:
+                            {
+                                studElement.label = "Y_" + Math.Round(studElement.Ystart, 2) + "_SI_" + k;
+                                studElement.studClass = 'I';
+                                studElement.studThickness = 4;
+                                k++;
+                                break;
+                            }
                     }
                 }
                 if (studElement.direction == 'A')
                 {
                     // Determine if exterior or interior
-                    if (studElement.layer == "ENG_STUD_EXT" || studElement.layer == "ENG_STUD_4_EXT" ||
-                        studElement.layer == "ENG_STUD_6_EXT" || studElement.layer == "ENG_STUD_8_EXT")
+                    switch (studElement.layer)
                     {
-                        studElement.label = "A_" + Math.Round(studElement.Ystart, 2) + "_SE_" + m;
-                        studElement.studClass = 'E';
-                        m++;
-                    }
-                    else
-                    {
-                        studElement.label = "A_" + Math.Round(studElement.Ystart, 2) + "_SI_" + m;
-                        studElement.studClass = 'I';
-                        m++;
+                        case "ENG_STUD_4_EXT":
+                        case "ENG_STUD_6_EXT":
+                        case "ENG_STUD_8_EXT":
+                            {
+                                studElement.label = "A_" + Math.Round(studElement.Ystart, 2) + "_SE_" + m;
+                                studElement.studClass = 'E';
+                                studElement.studThickness = System.Convert.ToInt32(studElement.layer.Substring(9, 1));
+                                m++;
+                                break;
+                            }
+                        case "ENG_STUD_EXT":
+                            {
+                                studElement.label = "A_" + Math.Round(studElement.Ystart, 2) + "_SE_" + m;
+                                studElement.studClass = 'E';
+                                studElement.studThickness = 6;
+                                m++;
+                                break;
+                            }
+                        case "ENG_STUD_4_INT":
+                        case "ENG_STUD_6_INT":
+                        case "ENG_STUD_8_INT":
+                            {
+                                studElement.label = "A_" + Math.Round(studElement.Ystart, 2) + "_SI_" + m;
+                                studElement.studClass = 'I';
+                                studElement.studThickness = System.Convert.ToInt32(studElement.layer.Substring(9, 1));
+                                m++;
+                                break;
+                            }
+                        default:
+                            {
+                                studElement.label = "A_" + Math.Round(studElement.Ystart, 2) + "_SI_" + m;
+                                studElement.studClass = 'I';
+                                studElement.studThickness = 4;
+                                m++;
+                                break;
+                            }
                     }
                 }
             }
@@ -732,41 +855,6 @@ namespace SCAD
                 }
             }
 
-            /************ CREATE MEDIATION INPUT ARRAYS WORKSHEET ************/
-            // Create optional mediation input arrays worksheet if box is checked
-            if ((bool)arrDesignData[58] == true)
-            {
-                Arrays(arrSorted, arrDiaphr, arrGap, arrShear, arrTruss, arrStud, arrBeam);
-            }
-
-            /************ FORMAT LEVEL-SPECIFIC CALC TABLES ************/
-            // Format workbook for level-specific calc tables
-            SCADBuild(arrDesignData, arrStud, iLevel);          
-
-            // Reactivate Screen Updating after sorting
-            this.Application.ScreenUpdating = true;
-
-            /************ START STUD MATCHING ROUTINES ************/
-            // Load Progress Bar and set final value
-            SCAD.MediationProgressBar MediationProgress = new MediationProgressBar();
-            MediationProgress.Show();
-            MediationProgress.progressBar.Maximum = (iLevel * arrTruss.Count() * 2) + (arrStud.Count() * 5) + ((iLevel - 1) * arrStud.Count());
-
-            // Send arrStud, arrTruss to Horizonal Matching Routine
-            HSM(ref arrStud, ref arrTruss, arrDesignData, iLevel, ref MediationProgress);
-
-            // Send arrStud, arrTruss, arrGap to Vertical Matching Routine
-            VSM(ref arrStud, ref arrTruss, arrGap, arrDesignData, iLevel, ref MediationProgress);
-                        
-            // Finalize population of stud workbook
-            StudCalcPopulate(ref arrStud, ref arrTruss, arrDesignData, iLevel, ref MediationProgress);
-
-            // Continue onto Scheduling and Individual Design
-            AutoDesign(ref arrStud, arrDesignData, iLevel, ref MediationProgress);
-
-            // Unload Progress Bar
-            MediationProgress.Close();
-
             return;
         }
 
@@ -803,7 +891,7 @@ namespace SCAD
                 wsCalcTable.get_Range("A3").Value = "Stud Species:";
                 wsCalcTable.get_Range("A5").Value = "Print Line";
                 wsCalcTable.get_Range("B2").Value = "=INPUT!D9";
-                wsCalcTable.get_Range("B3").Value = "VARIES:";
+                wsCalcTable.get_Range("B3").Value = "VARIES";
                 wsCalcTable.get_Range("B5").Value = "Stud Line";
                 wsCalcTable.get_Range("C5").Value = "Int or Ext (I/E)";
                 wsCalcTable.get_Range("D2").Value = "Stud Grade:";
@@ -1177,7 +1265,8 @@ namespace SCAD
         }
 
         // Arrays() -- Creates optional worksheet for all of the sorted raw data
-        public void Arrays(List<RawLineData> arrSorted, List<RawLineData> arrDiaphr, List<RawLineData> arrGap, List<RawLineData> arrShear, List<RawLineData> arrTruss, List<RawLineData> arrStud, List<RawLineData> arrBeam)
+        public void Arrays(ref List<RawLineData> arrSorted, ref List<RawLineData> arrDiaphr, ref List<RawLineData> arrGap, ref List<RawLineData> arrShear,
+            ref List<RawLineData> arrTruss, ref List<RawLineData> arrStud, ref List<RawLineData> arrBeam, ref SCAD.MediationProgressBar MediationProgress)
         {
             /* Arrays() -- called from DataSort() after data has been sorted.
              * Creates an optional worksheet that displays all of the arrays that have
@@ -1200,30 +1289,32 @@ namespace SCAD
             int i = 2;  // Counter to increment rows
 
             // Header Row for Array worksheet
-            wsArrays.get_Range("B1").Value = "Label";
-            wsArrays.get_Range("C1").Value = "Length";
-            wsArrays.get_Range("D1").Value = "Xstart";
-            wsArrays.get_Range("E1").Value = "Ystart";
+            wsArrays.get_Range("B1").Value = "CAD Layer";
+            wsArrays.get_Range("C1").Value = "Label";
+            wsArrays.get_Range("D1").Value = "Length";
+            wsArrays.get_Range("E1").Value = "Xstart";
+            wsArrays.get_Range("F1").Value = "Ystart";
             wsArrays.get_Range("G1").Value = "Xend";
             wsArrays.get_Range("H1").Value = "Yend";
-            wsArrays.get_Range("I1").Value = "level";
-            wsArrays.get_Range("J1").Value = "direction";
-            wsArrays.get_Range("K1").Value = "studClass";
-            wsArrays.get_Range("L1").Value = "studThickness";
-            wsArrays.get_Range("M1").Value = "angled";
-            wsArrays.get_Range("N1").Value = "startGapLength";
-            wsArrays.get_Range("O1").Value = "endGapLength";
+            wsArrays.get_Range("I1").Value = "Level";
+            wsArrays.get_Range("J1").Value = "Direction";
+            wsArrays.get_Range("K1").Value = "Stud Class";
+            wsArrays.get_Range("L1").Value = "Stud Thickness";
+            wsArrays.get_Range("M1").Value = "Angled";
+            wsArrays.get_Range("N1").Value = "StartGapLength";
+            wsArrays.get_Range("O1").Value = "EndGapLength";
             wsArrays.get_Range("P1").Value = "Yintercept";
-            wsArrays.get_Range("Q1").Value = "slope";
+            wsArrays.get_Range("Q1").Value = "Slope";
 
             // Loop through arrSorted
-            wsArrays.get_Range("A" + i).Value = "arrSorted";
+            wsArrays.get_Range("A" + i).Value = "Sorted Array";
             foreach (RawLineData element in arrSorted)
             {
-                wsArrays.get_Range("B" + i).Value = element.label;
-                wsArrays.get_Range("C" + i).Value = element.length;
-                wsArrays.get_Range("D" + i).Value = element.Xstart;
-                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("B" + i).Value = element.layer;
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.length;
+                wsArrays.get_Range("E" + i).Value = element.Xstart;
+                wsArrays.get_Range("F" + i).Value = element.Ystart;
                 wsArrays.get_Range("G" + i).Value = element.Xend;
                 wsArrays.get_Range("H" + i).Value = element.Yend;
                 wsArrays.get_Range("I" + i).Value = element.level;
@@ -1236,17 +1327,19 @@ namespace SCAD
                 wsArrays.get_Range("P" + i).Value = element.Yintercept;
                 wsArrays.get_Range("Q" + i).Value = element.slope;
                 i++;
+                MediationProgress.progressBar.Increment(1);
             }
 
             // Loop through arrStud
             i++;
-            wsArrays.get_Range("A" + i).Value = "arrStud";
+            wsArrays.get_Range("A" + i).Value = "Studs";
             foreach (RawLineData element in arrStud)
             {
-                wsArrays.get_Range("B" + i).Value = element.label;
-                wsArrays.get_Range("C" + i).Value = element.length;
-                wsArrays.get_Range("D" + i).Value = element.Xstart;
-                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("B" + i).Value = element.layer;
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.length;
+                wsArrays.get_Range("E" + i).Value = element.Xstart;
+                wsArrays.get_Range("F" + i).Value = element.Ystart;
                 wsArrays.get_Range("G" + i).Value = element.Xend;
                 wsArrays.get_Range("H" + i).Value = element.Yend;
                 wsArrays.get_Range("I" + i).Value = element.level;
@@ -1259,17 +1352,19 @@ namespace SCAD
                 wsArrays.get_Range("P" + i).Value = element.Yintercept;
                 wsArrays.get_Range("Q" + i).Value = element.slope;
                 i++;
+                MediationProgress.progressBar.Increment(1);
             }
 
             // Loop through arrTruss
             i++;
-            wsArrays.get_Range("A" + i).Value = "arrTruss";
+            wsArrays.get_Range("A" + i).Value = "Trusses";
             foreach (RawLineData element in arrTruss)
             {
-                wsArrays.get_Range("B" + i).Value = element.label;
-                wsArrays.get_Range("C" + i).Value = element.length;
-                wsArrays.get_Range("D" + i).Value = element.Xstart;
-                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("B" + i).Value = element.layer;
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.length;
+                wsArrays.get_Range("E" + i).Value = element.Xstart;
+                wsArrays.get_Range("F" + i).Value = element.Ystart;
                 wsArrays.get_Range("G" + i).Value = element.Xend;
                 wsArrays.get_Range("H" + i).Value = element.Yend;
                 wsArrays.get_Range("I" + i).Value = element.level;
@@ -1282,17 +1377,19 @@ namespace SCAD
                 wsArrays.get_Range("P" + i).Value = element.Yintercept;
                 wsArrays.get_Range("Q" + i).Value = element.slope;
                 i++;
+                MediationProgress.progressBar.Increment(1);
             }
 
             // Loop through arrGap
             i++;
-            wsArrays.get_Range("A" + i).Value = "arrGap";
+            wsArrays.get_Range("A" + i).Value = "Gap";
             foreach (RawLineData element in arrGap)
             {
-                wsArrays.get_Range("B" + i).Value = element.label;
-                wsArrays.get_Range("C" + i).Value = element.length;
-                wsArrays.get_Range("D" + i).Value = element.Xstart;
-                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("B" + i).Value = element.layer;
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.length;
+                wsArrays.get_Range("E" + i).Value = element.Xstart;
+                wsArrays.get_Range("F" + i).Value = element.Ystart;
                 wsArrays.get_Range("G" + i).Value = element.Xend;
                 wsArrays.get_Range("H" + i).Value = element.Yend;
                 wsArrays.get_Range("I" + i).Value = element.level;
@@ -1305,17 +1402,19 @@ namespace SCAD
                 wsArrays.get_Range("P" + i).Value = element.Yintercept;
                 wsArrays.get_Range("Q" + i).Value = element.slope;
                 i++;
+                MediationProgress.progressBar.Increment(1);
             }
 
             // Loop through arrDiaphr
             i++;
-            wsArrays.get_Range("A" + i).Value = "arrDiaphr";
+            wsArrays.get_Range("A" + i).Value = "Diaphragm";
             foreach (RawLineData element in arrDiaphr)
             {
-                wsArrays.get_Range("B" + i).Value = element.label;
-                wsArrays.get_Range("C" + i).Value = element.length;
-                wsArrays.get_Range("D" + i).Value = element.Xstart;
-                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("B" + i).Value = element.layer;
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.length;
+                wsArrays.get_Range("E" + i).Value = element.Xstart;
+                wsArrays.get_Range("F" + i).Value = element.Ystart;
                 wsArrays.get_Range("G" + i).Value = element.Xend;
                 wsArrays.get_Range("H" + i).Value = element.Yend;
                 wsArrays.get_Range("I" + i).Value = element.level;
@@ -1328,17 +1427,19 @@ namespace SCAD
                 wsArrays.get_Range("P" + i).Value = element.Yintercept;
                 wsArrays.get_Range("Q" + i).Value = element.slope;
                 i++;
+                MediationProgress.progressBar.Increment(1);
             }
 
             // Loop through arrBeam
             i++;
-            wsArrays.get_Range("A" + i).Value = "arrBeam";
+            wsArrays.get_Range("A" + i).Value = "Beams";
             foreach (RawLineData element in arrBeam)
             {
-                wsArrays.get_Range("B" + i).Value = element.label;
-                wsArrays.get_Range("C" + i).Value = element.length;
-                wsArrays.get_Range("D" + i).Value = element.Xstart;
-                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("B" + i).Value = element.layer;
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.length;
+                wsArrays.get_Range("E" + i).Value = element.Xstart;
+                wsArrays.get_Range("F" + i).Value = element.Ystart;
                 wsArrays.get_Range("G" + i).Value = element.Xend;
                 wsArrays.get_Range("H" + i).Value = element.Yend;
                 wsArrays.get_Range("I" + i).Value = element.level;
@@ -1351,17 +1452,19 @@ namespace SCAD
                 wsArrays.get_Range("P" + i).Value = element.Yintercept;
                 wsArrays.get_Range("Q" + i).Value = element.slope;
                 i++;
+                MediationProgress.progressBar.Increment(1);
             }
 
             // Loop through arrShear
             i++;
-            wsArrays.get_Range("A" + i).Value = "arrShear";
+            wsArrays.get_Range("A" + i).Value = "Shear";
             foreach (RawLineData element in arrShear)
             {
-                wsArrays.get_Range("B" + i).Value = element.label;
-                wsArrays.get_Range("C" + i).Value = element.length;
-                wsArrays.get_Range("D" + i).Value = element.Xstart;
-                wsArrays.get_Range("E" + i).Value = element.Ystart;
+                wsArrays.get_Range("B" + i).Value = element.layer;
+                wsArrays.get_Range("C" + i).Value = element.label;
+                wsArrays.get_Range("D" + i).Value = element.length;
+                wsArrays.get_Range("E" + i).Value = element.Xstart;
+                wsArrays.get_Range("F" + i).Value = element.Ystart;
                 wsArrays.get_Range("G" + i).Value = element.Xend;
                 wsArrays.get_Range("H" + i).Value = element.Yend;
                 wsArrays.get_Range("I" + i).Value = element.level;
@@ -1374,7 +1477,10 @@ namespace SCAD
                 wsArrays.get_Range("P" + i).Value = element.Yintercept;
                 wsArrays.get_Range("Q" + i).Value = element.slope;
                 i++;
+                MediationProgress.progressBar.Increment(1);
             }
+
+            wsArrays.get_Range("A1", "Q1").EntireColumn.AutoFit();
         }
 
         // HSM() -- Handles horizontal matching of stud and truss lines
@@ -2757,23 +2863,23 @@ namespace SCAD
                             wsCalcTable.get_Range("P" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
                                 + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",44,FALSE),0),0)";
                             wsCalcTable.get_Range("Q" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",45,FALSE),0),0)";
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",16,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",45,FALSE),0),0)";
                             wsCalcTable.get_Range("R" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",46,FALSE),0),0)";
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",17,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",46,FALSE),0),0)";
                             wsCalcTable.get_Range("S" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",47,FALSE),0),0)";
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",18,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",47,FALSE),0),0)";
                             wsCalcTable.get_Range("T" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",48,FALSE),0),0)";
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",19,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",48,FALSE),0),0)";
                             wsCalcTable.get_Range("U" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",49,FALSE),0),0)";
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",20,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",49,FALSE),0),0)";
                             wsCalcTable.get_Range("V" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",50,FALSE),0),0)";
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",21,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",50,FALSE),0),0)";
                             wsCalcTable.get_Range("W" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",51,FALSE),0),0)";
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",22,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",51,FALSE),0),0)";
                             wsCalcTable.get_Range("X" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i+1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",52,FALSE),0),0)+ H" + (j + 6);
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",23,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",52,FALSE),0),0)+ H" + (j + 6);
                             wsCalcTable.get_Range("Y" + (6 + j)).Value = "=IFERROR(IF(AQ" + (j + 6) + "<>\"\",VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:Y"
-                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",15,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",53,FALSE),0),0)+ I" + (j + 6);
+                                + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",24,FALSE)+VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!B6:BB" + (j + 6) + ",53,FALSE),0),0)+ I" + (j + 6);
                         }
                         wsCalcTable.get_Range("Z" + (6 + j)).Value = "=INPUT!$D$16";                        // Unbraced Lx
                         wsCalcTable.get_Range("AA" + (6 + j)).Value = "=INPUT!$D$17";                       // Unbraced Ly
@@ -2910,139 +3016,145 @@ namespace SCAD
              * Handles the stud analysis and schedule assignment of individual studs and then
              * creates a dynamic scheduling table for the user to handle scheduling design. */
 
-            try
+            // Declarations
+            Excel.Worksheet wsStudAnalyze = Application.Worksheets.get_Item("STUD ANALYSIS");    // Individual Stud Analysis worksheet
+            Excel.Worksheet wsSchedule = Application.Worksheets.get_Item("Stud Schedule");       // Stud Schedule worksheet
+            int k = new int();                                                                   // Counters to cycle through workbook
+            bool unityContinue = true;                                                           // Check to see if tested all stud types
+            string CompUnity = "x"; string BendUnity = "x";                                      // Unity flags to check for schedule match
+            string IntUnity = "x"; string DefUnity = "x"; string DefUnity2 = "x";
+            System.Object[,] IndividualSched = (System.Object[,])wsSchedule.get_Range("AF2", "AQ14").Value;
+                
+            // Set calculation to manual
+            Application.Calculation = Excel.XlCalculation.xlCalculationManual;
+
+            for (int i = 1; i <= iLevel; i++)
             {
-                // Declarations
-                Excel.Worksheet wsStudAnalyze = Application.Worksheets.get_Item("STUD ANALYSIS");    // Individual Stud Analysis worksheet
-                Excel.Worksheet wsSchedule = Application.Worksheets.get_Item("Stud Schedule");       // Stud Schedule worksheet
-                int k = new int();                                                                   // Counters to cycle through workbook
-                bool unityContinue = true;                                                           // Check to see if tested all stud types
-                string CompUnity = "x"; string BendUnity = "x";                                      // Unity flags to check for schedule match
-                string IntUnity = "x"; string DefUnity = "x"; string DefUnity2 = "x";
-
-                for (int i = 1; i <= iLevel; i++)
+                // Declare worksheet and grab stud information into array
+                Excel.Worksheet wsCalcTable = Application.Worksheets.get_Item("L" + i + " Calc Table");
+                System.Object[,] StudLines = (System.Object[,])wsCalcTable.get_Range("B6", "Y" + (5 + arrStud.Count(n => n.level == i))).Value;
+                    
+                for (int j = 1; j <= arrStud.Count(n => n.level == i); j++)
                 {
-                    Excel.Worksheet wsCalcTable = Application.Worksheets.get_Item("L" + i + " Calc Table");
-
-                    for (int j = 0; j < arrStud.Count(n => n.level == i); j++)
+                    /*** BEGIN COPYING OVER DATA TO ANAlYZE STUD ***/
+                    // Interior/Exterior
+                    if (StudLines[j, 2].ToString() == "E")
                     {
-                        /*** BEGIN COPYING OVER DATA TO ANAlYZE STUD ***/
-                        // Interior/Exterior
-                        if (wsCalcTable.get_Range("C" + (6 + j)).Value == "E")
-                        {
-                            wsStudAnalyze.get_Range("C6").Value = "Exterior";
-                        }
-                        if (wsCalcTable.get_Range("C" + (6 + j)).Value == "I")
-                        {
-                            wsStudAnalyze.get_Range("C6").Value = "Interior";
-                        }
-
-                        wsStudAnalyze.get_Range("D6").Value = wsCalcTable.get_Range("B" + (6 + j)).Value;       // Stud Label
-                        wsStudAnalyze.get_Range("G6").Value = i;                                                // Level
-                        wsStudAnalyze.get_Range("D17").Value = wsCalcTable.get_Range("P" + (6 + j)).Value;      // Roof DL Rxn
-                        wsStudAnalyze.get_Range("E17").Value = wsCalcTable.get_Range("Q" + (6 + j)).Value;      // Roof LL Rxn
-                        wsStudAnalyze.get_Range("F10").Value = wsCalcTable.get_Range("J" + (6 + j)).Value;      // Roof Trib Length
-                        wsStudAnalyze.get_Range("D18").Value = wsCalcTable.get_Range("R" + (6 + j)).Value;      // Unit DL Rxn
-                        wsStudAnalyze.get_Range("E18").Value = wsCalcTable.get_Range("S" + (6 + j)).Value;      // Unit LL Rxn
-                        wsStudAnalyze.get_Range("F11").Value = wsCalcTable.get_Range("K" + (6 + j)).Value;      // Unit Trib Length
-                        wsStudAnalyze.get_Range("D19").Value = wsCalcTable.get_Range("T" + (6 + j)).Value;      // Balcony DL Rxn
-                        wsStudAnalyze.get_Range("E19").Value = wsCalcTable.get_Range("U" + (6 + j)).Value;      // Balcony LL Rxn
-                        wsStudAnalyze.get_Range("F12").Value = wsCalcTable.get_Range("L" + (6 + j)).Value;      // Balcony Trib Length
-                        wsStudAnalyze.get_Range("D20").Value = wsCalcTable.get_Range("V" + (6 + j)).Value;      // Corridor DL Rxn
-                        wsStudAnalyze.get_Range("E20").Value = wsCalcTable.get_Range("W" + (6 + j)).Value;      // Corridor LL Rxn
-                        wsStudAnalyze.get_Range("F13").Value = wsCalcTable.get_Range("M" + (6 + j)).Value;      // Corridor Trib Length
-                        wsStudAnalyze.get_Range("D21").Value = wsCalcTable.get_Range("X" + (6 + j)).Value;      // Other DL Rxn
-                        wsStudAnalyze.get_Range("E21").Value = wsCalcTable.get_Range("Y" + (6 + j)).Value;      // Other LL Rxn
-                        wsStudAnalyze.get_Range("F14").Value = wsCalcTable.get_Range("N" + (6 + j)).Value;      // Other Trib Length
-                        wsStudAnalyze.get_Range("J21").Value = arrDesignData[3 + i];                            // Wall Height
-                        wsStudAnalyze.get_Range("E28").Value = arrDesignData[42 + i];                           // Unbraced Column Length Lx
-                        wsStudAnalyze.get_Range("E29").Value = arrDesignData[48 + i];                           // Unbraced Column Length Ly
-                        wsStudAnalyze.get_Range("M21").Value = wsCalcTable.get_Range("F" + (6 + j)).Value;      // Stud Species
-                        wsStudAnalyze.get_Range("M22").Value = wsCalcTable.get_Range("G" + (6 + j)).Value;      // Stud Grade
-
-                        // Input schedule data to find unity match
-                        k = 1;
-                        while ((CompUnity != "O.K." && BendUnity != "O.K." && IntUnity != "O.K." && DefUnity != "O.K." && DefUnity2 != "O.K.") || unityContinue == true)
-                        {
-                            if (wsCalcTable.get_Range("E" + (6 + j)).Value == 4)
-                            {
-                                wsStudAnalyze.get_Range("J11").Value = wsSchedule.get_Range("AF2").Offset[((2 * i) - 1), k];     // Stud Column Type
-                                wsStudAnalyze.get_Range("J12").Value = wsSchedule.get_Range("AF3").Offset[((2 * i) - 1), k];     // Stud Spacing
-
-                                // Store Unity Flags from analysis sheet
-                                CompUnity = wsStudAnalyze.get_Range("K54").Value;
-                                BendUnity = wsStudAnalyze.get_Range("K63").Value;
-                                IntUnity = wsStudAnalyze.get_Range("K81").Value;
-                                DefUnity = wsStudAnalyze.get_Range("M17").Value;
-                                DefUnity2 = wsStudAnalyze.get_Range("K83").Value;
-                                
-                                k++;
-                                if (k >= 7)
-                                    unityContinue = false;
-                            }
-
-                            if (wsCalcTable.get_Range("E" + (6 + j)).Value != 4)
-                            {
-                                wsStudAnalyze.get_Range("J11").Value = wsSchedule.get_Range("AM2").Offset[((2 * i) - 1), k];     // Stud Column Type
-                                wsStudAnalyze.get_Range("J12").Value = wsSchedule.get_Range("AM3").Offset[((2 * i) - 1), k];     // Stud Spacing
-
-                                // Store Unity Flags from analysis sheet
-                                CompUnity = wsStudAnalyze.get_Range("K54").Value;
-                                BendUnity = wsStudAnalyze.get_Range("K63").Value;
-                                IntUnity = wsStudAnalyze.get_Range("K81").Value;
-                                DefUnity = wsStudAnalyze.get_Range("M17").Value;
-                                DefUnity2 = wsStudAnalyze.get_Range("K83").Value;
-                                
-                                k++;
-                                if (k >= 5)
-                                    unityContinue = false;
-                            }
-                        }
-
-                        // Copy Unity values or flags over to calc tables
-                        if (CompUnity == "ERROR!!")
-                            wsCalcTable.get_Range("AF" + (j + 6)).Value = CompUnity;
-                        else
-                            wsCalcTable.get_Range("AF" + (j + 6)).Value = wsStudAnalyze.get_Range("K64").Value;
-                        if (BendUnity == "ERROR!!")
-                            wsCalcTable.get_Range("AG" + (j + 6)).Value = BendUnity;
-                        else
-                            wsCalcTable.get_Range("AG" + (j + 6)).Value = wsStudAnalyze.get_Range("K55").Value;
-                        if (IntUnity == "ERROR!!")
-                            wsCalcTable.get_Range("AH" + (j + 6)).Value = IntUnity;
-                        else
-                            wsCalcTable.get_Range("AH" + (j + 6)).Value = wsStudAnalyze.get_Range("E81").Value;
-                        if (DefUnity == "ERROR!!")
-                            wsCalcTable.get_Range("AI" + (j + 6)).Value = DefUnity;
-                        else
-                            wsCalcTable.get_Range("AI" + (j + 6)).Value = wsStudAnalyze.get_Range("G83").Value;
-                        if (DefUnity2 == "ERROR!!")
-                            wsCalcTable.get_Range("AJ" + (j + 6)).Value = DefUnity2;
-                        else
-                            wsCalcTable.get_Range("AJ" + (j + 6)).Value = wsStudAnalyze.get_Range("I83").Value;
-
-                        // Copy Schedule value over to calc tables
-                        if (wsCalcTable.get_Range("E" + (6 + j)).Value == 4)
-                        {
-                            wsCalcTable.get_Range("AC" + (j + 6)).Value = wsSchedule.get_Range("AF2").Offset[0, k];
-                        }
-                        if (wsCalcTable.get_Range("E" + (6 + j)).Value != 4)
-                        {
-                            wsCalcTable.get_Range("AC" + (j + 6)).Value = wsSchedule.get_Range("AM2").Offset[0, k];
-                        }
-
-                        // Reset Counter
-                        k = 0;
-
-                        // Increment Progress Bar
-                        MediationProgress.progressBar.Increment(1);
+                        wsStudAnalyze.get_Range("C6").Value = "Exterior";
                     }
+                    if (StudLines[j, 2].ToString() != "E")
+                    {
+                        wsStudAnalyze.get_Range("C6").Value = "Interior";
+                    }
+                    wsStudAnalyze.get_Range("D6").Value = StudLines[j,1].ToString();                        // Stud Label
+                    wsStudAnalyze.get_Range("G6").Value = i;                                                // Level
+                    wsStudAnalyze.get_Range("D17").Value = StudLines[j, 15].ToString();                     // Roof DL Rxn
+                    wsStudAnalyze.get_Range("E17").Value = StudLines[j, 16].ToString();                     // Roof LL Rxn
+                    wsStudAnalyze.get_Range("F10").Value = StudLines[j, 9].ToString();                      // Roof Trib Length
+                    wsStudAnalyze.get_Range("D18").Value = StudLines[j, 17].ToString();                     // Unit DL Rxn
+                    wsStudAnalyze.get_Range("E18").Value = StudLines[j, 18].ToString();                     // Unit LL Rxn
+                    wsStudAnalyze.get_Range("F11").Value = StudLines[j, 10].ToString();                     // Unit Trib Length
+                    wsStudAnalyze.get_Range("D19").Value = StudLines[j, 19].ToString();                     // Balcony DL Rxn
+                    wsStudAnalyze.get_Range("E19").Value = StudLines[j, 20].ToString();                     // Balcony LL Rxn
+                    wsStudAnalyze.get_Range("F12").Value = StudLines[j, 11].ToString();                     // Balcony Trib Length
+                    wsStudAnalyze.get_Range("D20").Value = StudLines[j, 21].ToString();                     // Corridor DL Rxn
+                    wsStudAnalyze.get_Range("E20").Value = StudLines[j, 22].ToString();                     // Corridor LL Rxn
+                    wsStudAnalyze.get_Range("F13").Value = StudLines[j, 12].ToString();                     // Corridor Trib Length
+                    wsStudAnalyze.get_Range("D21").Value = StudLines[j, 23].ToString();                     // Other DL Rxn
+                    wsStudAnalyze.get_Range("E21").Value = StudLines[j, 24].ToString();                     // Other LL Rxn
+                    wsStudAnalyze.get_Range("F14").Value = StudLines[j, 13].ToString();                     // Other Trib Length
+                    wsStudAnalyze.get_Range("J21").Value = arrDesignData[3 + i];                            // Wall Height
+                    wsStudAnalyze.get_Range("E28").Value = arrDesignData[42 + i];                           // Unbraced Column Length Lx
+                    wsStudAnalyze.get_Range("E29").Value = arrDesignData[48 + i];                           // Unbraced Column Length Ly
+                    wsStudAnalyze.get_Range("M21").Value = StudLines[j, 5].ToString();                      // Stud Species
+                    wsStudAnalyze.get_Range("M22").Value = StudLines[j, 6].ToString();                      // Stud Grade
+
+                    // Input schedule data to find unity match
+                    k = 1;
+                    do
+                    {
+                        if (StudLines[j, 4].ToString() == "4")
+                        {
+                            wsStudAnalyze.get_Range("J11").Value = IndividualSched[(2 * i), k].ToString();     // Stud Column Type
+                            wsStudAnalyze.get_Range("J12").Value = IndividualSched[(2 * i) + 1, k].ToString();         // Stud Spacing
+                            Application.Calculate();
+
+                            // Store Unity Flags from analysis sheet
+                            CompUnity = (string)wsStudAnalyze.get_Range("K54").Value;
+                            BendUnity = (string)wsStudAnalyze.get_Range("K63").Value;
+                            IntUnity = (string)wsStudAnalyze.get_Range("K81").Value;
+                            DefUnity = (string)wsStudAnalyze.get_Range("M17").Value;
+                            DefUnity2 = (string)wsStudAnalyze.get_Range("K83").Value;
+                                
+                            k++;
+                            if (k >= 8) unityContinue = false;
+                        }
+
+                        if (StudLines[j, 4].ToString() != "4")
+                        {
+                            wsStudAnalyze.get_Range("J11").Value = IndividualSched[(2 * i), k + 8].ToString();     // Stud Column Type
+                            wsStudAnalyze.get_Range("J12").Value = IndividualSched[(2 * i) + 1, k + 8].ToString();     // Stud Spacing
+                            Application.Calculate();
+
+                            // Store Unity Flags from analysis sheet
+                            CompUnity = (string)wsStudAnalyze.get_Range("K54").Value;
+                            BendUnity = (string)wsStudAnalyze.get_Range("K63").Value;
+                            IntUnity = (string)wsStudAnalyze.get_Range("K81").Value;
+                            DefUnity = (string)wsStudAnalyze.get_Range("M17").Value;
+                            DefUnity2 = (string)wsStudAnalyze.get_Range("K83").Value;
+
+                            k++;
+                            if (k >= 4) unityContinue = false;
+                        }
+                    } while (!(CompUnity == "O.K." && BendUnity == "O.K." && IntUnity == "O.K." && DefUnity == "O.K." && DefUnity2 == "O.K.") && unityContinue == true);
+
+                    // Copy Unity values or flags over to calc tables
+                    if (BendUnity == "ERROR!!") wsCalcTable.get_Range("AF" + (j + 5)).Value = BendUnity;
+                    if (BendUnity != "ERROR!!") wsCalcTable.get_Range("AF" + (j + 5)).Value = wsStudAnalyze.get_Range("K64").Value;
+
+                    if (CompUnity == "ERROR!!") wsCalcTable.get_Range("AG" + (j + 5)).Value = CompUnity;
+                    if (CompUnity != "ERROR!!") wsCalcTable.get_Range("AG" + (j + 5)).Value = wsStudAnalyze.get_Range("K55").Value;
+
+                    if (IntUnity == "ERROR!!") wsCalcTable.get_Range("AH" + (j + 5)).Value = IntUnity;
+                    if (IntUnity != "ERROR!!") wsCalcTable.get_Range("AH" + (j + 5)).Value = wsStudAnalyze.get_Range("E81").Value;
+
+                    if (DefUnity == "ERROR!!") wsCalcTable.get_Range("AI" + (j + 5)).Value = DefUnity;
+                    if (DefUnity != "ERROR!!") wsCalcTable.get_Range("AI" + (j + 5)).Value = wsStudAnalyze.get_Range("G83").Value;
+
+                    if (DefUnity2 == "ERROR!!") wsCalcTable.get_Range("AJ" + (j + 5)).Value = DefUnity2;
+                    if (DefUnity2 != "ERROR!!") wsCalcTable.get_Range("AJ" + (j + 5)).Value = wsStudAnalyze.get_Range("I83").Value;
+
+                    // Copy Schedule value over to calc tables
+                    if (StudLines[j, 4].ToString() == "4")
+                    {
+                        wsCalcTable.get_Range("AC" + (j + 5)).Value = IndividualSched[1, k - 1].ToString();
+                        Application.Calculate();
+                    }
+                    if (StudLines[j, 4].ToString() != "4")
+                    {
+                        wsCalcTable.get_Range("AC" + (j + 5)).Value = IndividualSched[1, k + 7].ToString();
+                        Application.Calculate();
+                    }
+
+                    // Reset Flags
+                    CompUnity = "x";
+                    BendUnity = "x";
+                    IntUnity = "x";
+                    DefUnity = "x";
+                    DefUnity2 = "x";
+                    unityContinue = true;
 
                     // Increment Progress Bar
                     MediationProgress.progressBar.Increment(1);
                 }
+
+                // Increment Progress Bar
+                MediationProgress.progressBar.Increment(1);
             }
-            catch (Exception e) { MessageBox.Show(e.Message); }
+
+            // Return to automatic calculation
+            Application.Calculation = Excel.XlCalculation.xlCalculationAutomatic;
+
             return;
         }
 
