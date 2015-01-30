@@ -18,7 +18,7 @@ namespace SCAD
 
         private void LaunchStuds_Click(object sender, RibbonControlEventArgs e)
         {
-            /* Calls the StudDesign() function from SCADMain. To begin.*/
+            /* Calls the StudDesign() function from SCADMain. Begins the design of the stud walls and schedule.*/
             Globals.SCADMain.StudDesign();
         }
 

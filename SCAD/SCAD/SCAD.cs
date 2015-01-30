@@ -203,6 +203,9 @@ namespace SCAD
             // Continue onto Scheduling and Individual Stud Design
             AutoDesign(ref arrStud, arrDesignDataSort, iLevel, ref MediationProgress);
 
+            // Dump data onto OUTPUT sheet and begin Dynamic Scheduling
+            StartDynamicSchedule();
+
             /************ RETURN BACK TO USER FOR FINAL SCHEDULING ************/
 
             // Reactivate Screen Updating after sorting
@@ -213,7 +216,7 @@ namespace SCAD
 
             Excel.Worksheet wsDynamicSchedule = Application.Worksheets.get_Item("Dynamic Schedule");
             wsDynamicSchedule.Select();
-            MessageBox.Show("Mediation and Invidiual Stud Design Complete. Please begin consolidating the Dynamic Schedule.");
+            MessageBox.Show("Mediation and Invidiual Stud Design Complete.\nPlease begin consolidating the Dynamic Schedule. If edits have been made to stud callouts, please click \"Update Schedule\" button above.");
             
             return;
         }
@@ -861,7 +864,7 @@ namespace SCAD
         // SCADBuild() -- Creates calc worksheets for each level in the Stud Design Workbook.
         public void SCADBuild(object[] arrDesignData, List<RawLineData> arrStud, int iLevel)
         {
-            /* SCADBuild() -- called from DataSort() after data has been sorted.
+            /* SCADBuild() -- called from StudDesign() after data has been sorted.
              * Responsible for the initial creation and design of the stud level calculation
              * worksheets in the Stud Design Workbook. Design Data is also populated on
              * Input worksheet.*/
@@ -1268,7 +1271,7 @@ namespace SCAD
         public void Arrays(ref List<RawLineData> arrSorted, ref List<RawLineData> arrDiaphr, ref List<RawLineData> arrGap, ref List<RawLineData> arrShear,
             ref List<RawLineData> arrTruss, ref List<RawLineData> arrStud, ref List<RawLineData> arrBeam, ref SCAD.MediationProgressBar MediationProgress)
         {
-            /* Arrays() -- called from DataSort() after data has been sorted.
+            /* Arrays() -- called from StudDesign() after data has been sorted.
              * Creates an optional worksheet that displays all of the arrays that have
              * been created from the raw data after it has been sorted and classified.
              * This is to debug any potential mismatch or confusion of particular 
@@ -1486,7 +1489,7 @@ namespace SCAD
         // HSM() -- Handles horizontal matching of stud and truss lines
         public void HSM(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
         {
-            /* HSM() -- called from DataSort() after raw data has been sorted.
+            /* HSM() -- called from StudDesign() after raw data has been sorted.
              * This function takes the Stud data array and matches it with truss lines that
              * intersect stud walls horizontally on the same level. The matched truss
              * label and length values are appended to that stud line in a matched
@@ -2514,7 +2517,7 @@ namespace SCAD
         // VSM() -- Handles vertical matching of stud and truss lines of multiple floors
         public void VSM(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, List<RawLineData> arrGap, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
         {
-            /* VSM() -- called from DataSort() after raw data has been sorted.
+            /* VSM() -- called from StudDesign() after raw data has been sorted.
              * This function takes the Stud data array and matches it with stud lines that
              * intersect stud walls vertically on the above levels. The matched stud
              * label is appended to that stud line in the matched stud variable. The arrays
@@ -2778,7 +2781,7 @@ namespace SCAD
         // StudCalcPopulate() -- Populates the stud calculation tables to complete mediation routine
         public void StudCalcPopulate(ref List<RawLineData> arrStud, ref List<RawLineData> arrTruss, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
         {
-            /* StudCalcPopulate() -- Called from DataSort() after vertical and horizontal
+            /* StudCalcPopulate() -- Called from StudDesign() after vertical and horizontal
              * matching routines are completed. This function handles population of 
              * the stud calc table data in the Stud Design Workbook. After this
              * step is complete, the scheduling parameters are then determined.*/
@@ -3012,7 +3015,7 @@ namespace SCAD
         // AutoDesign() -- Designs the stud analysis and scheduling for individual studs, populates schedule for dynamic scheduling
         public void AutoDesign(ref List<RawLineData> arrStud, Object[] arrDesignData, int iLevel, ref SCAD.MediationProgressBar MediationProgress)
         {
-            /* AutoDesign() -- Called from DataSort() after Stud Calc Packs are populated.
+            /* AutoDesign() -- Called from StudDesign() after Stud Calc Packs are populated.
              * Handles the stud analysis and schedule assignment of individual studs and then
              * creates a dynamic scheduling table for the user to handle scheduling design. */
 
@@ -3158,6 +3161,33 @@ namespace SCAD
             return;
         }
 
+        // StartDynamicSchedule() -- Copies data to OUTPUT sheet and collates schedule callouts into dynamic schedule sheet for user design
+        public void StartDynamicSchedule()
+        {
+            /* StartDynamicSchedule() -- Called from StudDesign() after indvidual stud design. Can
+             * also be called from "Update Schedule" button on toolbar after individual callouts are
+             * changed*/
+            try
+            {
+                // Declarations
+                Excel.Worksheet wsOutput = Application.Worksheets.get_Item("OUTPUT");
+                Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
+                int iLevel = wsInput.get_Range("D7").Value;                             // Number of levels in project
+                int iStud = 0;                                                          // Number of studs in project
+
+                // Determine number of studs in project
+                for (int i = 1; i <= iLevel; i++)
+                {
+                    Excel.Worksheet wsCalcSheet = Application.Worksheets.get_Item("L" + i + " Calc Table");
+                    iStud += wsCalcSheet.UsedRange.Rows.Count - 5;
+                }
+
+                // Create Headers and design of OUTPUT worksheet
+
+            }
+            catch (Exception e) { MessageBox.Show(e.Message); }
+            return;
+        }
         // StudExport() -- Creates an AutoCAD script file of Stud Design.
         public string StudExport()
         {
