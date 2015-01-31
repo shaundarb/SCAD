@@ -955,6 +955,9 @@ namespace SCAD
                 wsCalcTable.get_Range("BD5").Value = "Start Y";
                 wsCalcTable.get_Range("BE5").Value = "End X";
                 wsCalcTable.get_Range("BF5").Value = "End Y";
+                wsCalcTable.get_Range("BG5").Value = "Lin. ft. 6\"";
+                wsCalcTable.get_Range("BH5").Value = "Lin. ft. 4\"";
+                wsCalcTable.get_Range("BJ5").Value = "Stud and Above Schedule";
 
                 // Populate Drop Downs
                 wsCalcTable.get_Range("B4").Validation.Add(Excel.XlDVType.xlValidateList, Type.Missing,
@@ -2615,10 +2618,10 @@ namespace SCAD
                                         }
                                     }
 
-                                    // If lengths are not equal, check gap differences to verify if they are collinear on different levels
+                                    // If lengths are not equal, check gap differences to verify if they are collinear on different levels (Upper element is contained within the lower elements length
                                     if (upperStudElement.length > lowerStudElement.length && 
-                                        Math.Abs(arrGap[i-1].Ystart - upperStudElement.Ystart) >= Math.Abs(arrGap[i - 2].Ystart - lowerStudElement.Ystart) && 
-                                        Math.Abs(arrGap[i - 1].Ystart - upperStudElement.Yend) >= Math.Abs(arrGap[i - 2].Ystart - lowerStudElement.Yend))
+                                        (arrGap[i - 1].Ystart - upperStudElement.Ystart) >= (arrGap[i - 2].Ystart - lowerStudElement.Ystart) && 
+                                        (arrGap[i - 1].Ystart - upperStudElement.Yend) <= (arrGap[i - 2].Ystart - lowerStudElement.Yend))
                                     {
                                         // Add upper stud match label to lower stud element 
                                         lowerStudElement.studMatch = upperStudElement.label;
@@ -2991,12 +2994,23 @@ namespace SCAD
                         wsCalcTable.get_Range("AX" + (6 + j)).Value = "=IFERROR(L" + (j + 6) + "*INPUT!D30, 0)";                                // Balc LL Rxn Current
                         wsCalcTable.get_Range("AY" + (6 + j)).Value = "=IFERROR(M" + (j + 6) + "*INPUT!D31, 0)";                                // Corr DL Rxn Current
                         wsCalcTable.get_Range("AZ" + (6 + j)).Value = "=IFERROR(M" + (j + 6) + "*INPUT!D32, 0)";                                // Corr LL Rxn Current
-                        wsCalcTable.get_Range("BB" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D33+IF(C" + (j + 6) + "=\"I\",INPUT!D35*O" + (j + 6) + ",INPUT!D36*O" + (j + 6) + "), 0)";                                // Other DL Rxn Current
-                        wsCalcTable.get_Range("BA" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D34, 0)";                                // Other LL Rxn Current
+                        wsCalcTable.get_Range("BA" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D33+IF(C" + (j + 6) + "=\"I\",INPUT!D35*O" + (j + 6) + ",INPUT!D36*O" + (j + 6) + "), 0)";                                // Other DL Rxn Current
+                        wsCalcTable.get_Range("BB" + (6 + j)).Value = "=IFERROR(N" + (j + 6) + "*INPUT!D34, 0)";                                // Other LL Rxn Current
                         wsCalcTable.get_Range("BC" + (6 + j)).Value = studElement.Xstart;                                                       // X Start Coord
                         wsCalcTable.get_Range("BD" + (6 + j)).Value = studElement.Ystart;                                                       // Y Start Coord
                         wsCalcTable.get_Range("BE" + (6 + j)).Value = studElement.Xend;                                                         // X End Coord
                         wsCalcTable.get_Range("BF" + (6 + j)).Value = studElement.Yend;                                                         // Y End Coord
+
+                        // Formula for linear feet required and stud schedules above
+                        wsCalcTable.get_Range("BG" + (6 + j)).Value = "=IF(RIGHT(RC[-29],1)=\"6\",RC[-44]*VALUE(LEFT(RC[-29],1))*12*((RC[-4]-RC[-2])^2+(RC[-3]-RC[-1])^2)^0.5/12/RC[-28],0)";
+                        wsCalcTable.get_Range("BH" + (6 + j)).Value = "=IF(RIGHT(RC[-30],1)=\"4\",RC[-45]*VALUE(LEFT(RC[-30],1))*12*((RC[-5]-RC[-3])^2+(RC[-4]-RC[-2])^2)^0.5/12/RC[-29],0)";
+                        if (i == iLevel) wsCalcTable.get_Range("BJ" + (6 + j)).Value = "=CONCATENATE(AC" + (j + 6) + ",\"" + i + " \")";
+                        else wsCalcTable.get_Range("BJ" + (6 + j)).Value = "=CONCATENATE(AC" + (j + 6) + ",\"" + i + " \",IFERROR(VLOOKUP(AQ" + (j + 6) + ",'L" + (i + 1) + " Calc Table'!$B$6:$BJ$" 
+                            + (arrStud.Count(n => n.level == (i + 1)) + 6) + ",61,0),\"\"))";
+                        if (i == 1) wsCalcTable.get_Range("BK" + (6 + j)).Value = "=RC[-1]";
+                        else wsCalcTable.get_Range("BK" + (6 + j)).Value = "=IF(RC[-19]=\"\",RC[-1],\"\")";
+                        wsCalcTable.get_Range("BL" + (6 + j)).Value = "=IF(MID(BK" + (j + 6) + ",4,1)=\" \",IF(MID(BK" + (j + 6) + ",8,1)=\" \",IF(MID(BK" + (j + 6)
+                            + ",12,1)=\" \",IF(MID(BK" + (j + 6) + ",16,1)=\" \",IF(MID(BK" + (j + 6) + ",20,1)=\" \",75,60),45),30),15),6)";
 
                         MediationProgress.progressBar.Increment(1);
                         j++;
@@ -3172,22 +3186,144 @@ namespace SCAD
                 // Declarations
                 Excel.Worksheet wsOutput = Application.Worksheets.get_Item("OUTPUT");
                 Excel.Worksheet wsInput = Application.Worksheets.get_Item("INPUT");
-                int iLevel = wsInput.get_Range("D7").Value;                             // Number of levels in project
-                int iStud = 0;                                                          // Number of studs in project
+                int iLevel = System.Convert.ToInt32(wsInput.get_Range("D7").Value);                             // Number of levels in project
+                int iStud = 0;                                                                                  // Number of studs in level
 
-                // Determine number of studs in project
+                // Freeze the header row
+                ((Excel._Worksheet)wsOutput).Activate();
+                wsOutput.Application.ActiveWindow.SplitRow = 2;
+                wsOutput.Application.ActiveWindow.FreezePanes = true;
+                
+                // Create Headers and design of OUTPUT worksheet
+                wsOutput.get_Range("L1").Value = "STUD CALLOUT";
+                wsOutput.get_Range("R1").Value = "FOUNDATION REACTIONS";
+                wsOutput.get_Range("AC1").Value = "MATERIAL TAKEOFFS";
+                wsOutput.get_Range("B2").Value = "ID";
+                wsOutput.get_Range("C2").Value = "Label";
+                wsOutput.get_Range("D2").Value = "X-Start";
+                wsOutput.get_Range("E2").Value = "Y-Start";
+                wsOutput.get_Range("F2").Value = "Z-Start";
+                wsOutput.get_Range("G2").Value = "X-End";
+                wsOutput.get_Range("H2").Value = "Y-End";
+                wsOutput.get_Range("I2").Value = "Z-End";
+                wsOutput.get_Range("J2").Value = "Label";
+                wsOutput.get_Range("K2").Value = "X Avg.";
+                wsOutput.get_Range("L2").Value = "Y Avg.";
+                wsOutput.get_Range("N2").Value = "Callout";
+                wsOutput.get_Range("P2").Value = "Label";
+                wsOutput.get_Range("Q2").Value = "X Avg.";
+                wsOutput.get_Range("R2").Value = "Y Avg.";
+                wsOutput.get_Range("T2").Value = "Reaction (klf)";
+                wsOutput.get_Range("U1").Value = "=COUNTA(U3:U451)";
+                wsOutput.get_Range("V2").Value = 1;
+                wsOutput.get_Range("W2").Value = 2;
+                wsOutput.get_Range("X2").Value = 3;
+                wsOutput.get_Range("Y2").Value = 4;
+                wsOutput.get_Range("Z2").Value = 5;
+                wsOutput.get_Range("AA2").Value = 6;
+                wsOutput.get_Range("AB2").Value = "Level";
+                wsOutput.get_Range("AC2").Value = "2x6 ln. ft.";
+                wsOutput.get_Range("AD2").Value = "2x4 ln. ft.";
+
+                // Font and Borders
+                wsOutput.Cells.Font.Name = "Calibri";
+                wsOutput.Cells.Font.Size = 10;
+                wsOutput.get_Range("A1", "AD2").HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter;
+                wsOutput.get_Range("A2", "AD2").Borders[Excel.XlBordersIndex.xlEdgeBottom].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("A2", "AD2").Borders[Excel.XlBordersIndex.xlEdgeBottom].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("B2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("B2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("I2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("I2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("N2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("N2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("O2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("O2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("T2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("T2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("U2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("U2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("Z2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("Z2").EntireColumn.Borders[Excel.XlBordersIndex.xlEdgeRight].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("AB8", "AD8").HorizontalAlignment = Excel.XlHAlign.xlHAlignCenter;
+                wsOutput.get_Range("AB8", "AD8").Borders[Excel.XlBordersIndex.xlEdgeBottom].LineStyle = Excel.XlLineStyle.xlContinuous;
+                wsOutput.get_Range("AB8", "AD8").Borders[Excel.XlBordersIndex.xlEdgeBottom].Weight = Excel.XlBorderWeight.xlThin;
+                wsOutput.get_Range("AC3", "AD9").NumberFormat = "#,##0";
+
+
+                // Copy over Stud arrays to OUTPUT worksheet
+                int j = 0;                              // Counter for output row number
                 for (int i = 1; i <= iLevel; i++)
                 {
-                    Excel.Worksheet wsCalcSheet = Application.Worksheets.get_Item("L" + i + " Calc Table");
-                    iStud += wsCalcSheet.UsedRange.Rows.Count - 5;
+                    Excel.Worksheet wsCalcTable = Application.Worksheets.get_Item("L" + i + " Calc Table");
+                    iStud = wsCalcTable.UsedRange.Rows.Count - 4;
+                    System.Object[,] StudLabels = (System.Object[,])wsCalcTable.get_Range("B6", "B" + (wsCalcTable.UsedRange.Rows.Count + 1)).Value2;
+                    System.Object[,] StudCoords = (System.Object[,])wsCalcTable.get_Range("BC6", "BF" + (wsCalcTable.UsedRange.Rows.Count + 1)).Value2;
+
+                    for (int k = 1; k <= (wsCalcTable.UsedRange.Rows.Count - 4); k++)
+                    {
+                        wsOutput.get_Range("B" + (3 + j)).Value = j + 1;                                            // ID
+                        wsOutput.get_Range("C" + (3 + j)).Value = StudLabels[k, 1].ToString();                      // Label
+                        wsOutput.get_Range("D" + (3 + j)).Value = StudCoords[k, 1].ToString();                      // X-Start
+                        wsOutput.get_Range("E" + (3 + j)).Value = StudCoords[k, 2].ToString();                      // Y-Start
+                        wsOutput.get_Range("F" + (3 + j)).Value = 0;                                                // Z-Start
+                        wsOutput.get_Range("G" + (3 + j)).Value = StudCoords[k, 3].ToString();                      // X-End
+                        wsOutput.get_Range("H" + (3 + j)).Value = StudCoords[k, 4].ToString();                      // Y-End
+                        wsOutput.get_Range("I" + (3 + j)).Value = 0;                                                // Z-End
+
+                        // Stud Callout, Label ,and Coord Avgs Formulas
+                        wsOutput.get_Range("J" + (3 + j)).Value = "=CONCATENATE(LEFT(C" + (j + 3) + ",1),\"_\",RIGHT(C" + (j + 3) 
+                            + ",LEN(C" + (j + 3) + ")-FIND(\"_\",C" + (j + 3) + ",3)))";
+                        wsOutput.get_Range("K" + (3 + j)).Value = "=IF(LEFT(C" + (j + 3) + ",1)=\"X\",AVERAGE(D" + (j + 3) + ",G" + (j + 3) + ")-18,IF(LEFT(C" 
+                            + (j + 3) + ",1)=\"A\",AVERAGE(D" + (j + 3) + ",G" + (j + 3) + "),AVERAGE(D" + (j + 3) + ",G" + (j + 3) + ")+6))";
+                        wsOutput.get_Range("L" + (3 + j)).Value = "=IF(LEFT(C" + (j + 3) + ",1)=\"Y\",AVERAGE(E" + (j + 3) + ",H" + (j + 3) + ")-18,IF(LEFT(C" 
+                            + (j + 3) + ",1)=\"A\",AVERAGE(E" + (j + 3) + ",H" + (j + 3) + "),AVERAGE(E" + (j + 3) + ",H" + (j + 3) + ")+6))";
+                        wsOutput.get_Range("M" + (3 + j)).Value = "=AVERAGE(F" + (j + 3) + ",I" + (j + 3) + ")";
+                        wsOutput.get_Range("N" + (3 + j)).Value = "=VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BK" + (wsCalcTable.UsedRange.Rows.Count + 6) + ",62,0)";
+
+                        // Foundation Reaction Formulas
+                        wsOutput.get_Range("P" + (3 + j)).Value = "=J" + (j + 3);
+                        wsOutput.get_Range("Q" + (3 + j)).Value = "=K" + (j + 3);
+                        wsOutput.get_Range("R" + (3 + j)).Value = "=L" + (j + 3);
+                        wsOutput.get_Range("S" + (3 + j)).Value = "=M" + (j + 3);
+                        if (i == 1) wsOutput.get_Range("T" + (3 + j)).Value = "=CONCATENATE(ROUND((VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB"  + (iStud + 5) + ",15,0)+VLOOKUP(C" + (j + 3) 
+                            + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",17,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",19,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" 
+                            + (iStud + 5) + ",21,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",23,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",44,0)+VLOOKUP(C" 
+                            + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",46,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",48,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB"
+                            + (iStud + 5) + ",50,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",52,0))/1000,2),\"D \",ROUND((VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) 
+                            + ",18,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",20,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",22,0)+VLOOKUP(C" + (j + 3) 
+                            + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",24,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",47,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" 
+                            + (iStud + 5) + ",49,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",51,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",53,0))/1000,2),\"L \",ROUND((VLOOKUP(C" 
+                            + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",16,0)+VLOOKUP(C" + (j + 3) + ",'L1 Calc Table'!B6:BB" + (iStud + 5) + ",45,0))/1000,2),\"Lr\")";
+                        else wsOutput.get_Range("T" + (3 + j)).Value = "=IF(MID(N" + (j + 3) + ",3,1)=\"2\",CONCATENATE(ROUND((VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) 
+                            + ",15,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",17,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",19,0)+VLOOKUP(C" 
+                            + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",21,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",23,0)+VLOOKUP(C" + (j + 3) + ",'L" + i 
+                            + " Calc Table'!B6:BB" + (iStud + 5) + ",44,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",46,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" 
+                            + (iStud + 5) + ",48,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",50,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) 
+                            + ",52,0))/1000,2),\"D \",ROUND((VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",18,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) 
+                            + ",20,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",22,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",24,0)+VLOOKUP(C" 
+                            + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",47,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",49,0)+VLOOKUP(C" + (j + 3) + ",'L" + i 
+                            + " Calc Table'!B6:BB" + (iStud + 5) + ",51,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",53,0))/1000,2),\"L \",ROUND((VLOOKUP(C" + (j + 3) + ",'L" + i 
+                            + " Calc Table'!B6:BB" + (iStud + 5) + ",16,0)+VLOOKUP(C" + (j + 3) + ",'L" + i + " Calc Table'!B6:BB" + (iStud + 5) + ",45,0))/1000,2),\"Lr\"),\"\")";
+
+                        j++;
+                    }
+                    // Material Takeoffs Table
+                    wsOutput.get_Range("AB9").Value = "TOTAL";
+                    wsOutput.get_Range("AC9").Value = "=SUM(AC3:AC8)";
+                    wsOutput.get_Range("AD9").Value = "=SUM(AD3:AD8)";
+                    wsOutput.get_Range("AB" + (9 - i)).Value = i;
+                    wsOutput.get_Range("AC" + (9 - i)).Value = "=SUM('L" + i + " Calc Table'!BG6:BG" + (iStud + 5) + ")";
+                    wsOutput.get_Range("AD" + (9 - i)).Value = "=SUM('L" + i + " Calc Table'!BH6:BH" + (iStud + 5) + ")";
                 }
 
-                // Create Headers and design of OUTPUT worksheet
-
+                // Autofit columns
+                wsOutput.get_Range("A1", "AD1").EntireColumn.AutoFit();
             }
             catch (Exception e) { MessageBox.Show(e.Message); }
             return;
         }
+
         // StudExport() -- Creates an AutoCAD script file of Stud Design.
         public string StudExport()
         {
